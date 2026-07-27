@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>현장 보드판</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="현장 보드판">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAADoElEQVR4nO3cQW7bMBRFUabobtK1taNuIh1lb1lQBwaMoM1TZFukQv5zpklhgbz+imTVT88vPxt85NvZB8DXJQ4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEImDSBxE4iASB5E4iMRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEH0/+wCO8fb79exD+NePP7/OPoRHPc3+xfhfMIv3pk5k7tPKFy+jzXCEGyaOY5Z1n+U4/zdrHHOt+FxHezVrHAwwZRwzvhFnPOYp42AMcRCJg0gcROIgEgeROIjEQSQOonM+sp/xduHpxn/6PzQOTRxiWCXjTivKOMqwlRwxOWTRSe8R0n1yKKOf3mvbNw5l9NZ1hV3KEnWMw9gYo98614pDGSN1Wm2nFSJxEHWJwzllvB5rbnIQiYNIHETiIBIHkTiIFvlmn0dsfPBd/Jq8bhx7Hoa4/k7NSirGccczMpd/Ui2RWnE8+OhUtUQK/UF61EN1U38H3E2qxHHsjhbpo0QcPfayQh/rx9FvF5fvY/E4eu/f2n2sHMeYnVu4j1qXssmHV6cL7/pOy06OnVv79vs13bfY+NF9rzWdZePYY8/e17nl9b8149jzVt6/63t+c8nhsWYcn7p1HtScHxXjuG+nC/axYBxnTfj1ziwLxrHtkQFQbXiUi4P9xEEkDiJxEImDSBxE5eJ45G7Eencyti0Yx1l3I9a7C7JgHJ+6bwBUGxutZhzt9p0uWEZbNY5jP2Q/9gGAiawZx043/XfZgpaNY/8Tfmn7N35032tNxwPGrdUeDxuWnRxt1Bt61bHR1o6j9d+5hctoy8fReu7f2mW0CnG0Pru4fBmtSBzt6L2sUEarE0c7bkeLlNGqXcpe9vXuC9c6WVzUiuPijkSqZXFRMY6L6377HtKkbhxXxQvYUOgPUm4lDiJxEImDSBxE4iASB5E4iLrE4am78XqsuclBJA6iXnE4s4zUabU7Tg59jNFvnZ1WiPrGYXj01nWFu08OffTTe22fnl9+dn2BK8/UHGjMW27c3xxGyFGGreS4yfGeKXKH8e+uc+JgCi5licRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEImDSBxE4iASB5E4iMRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIH0V/G19ZfgFBNKAAAAABJRU5ErkJggg==">
+<link rel="apple-touch-startup-image" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=">
+<style>
+  :root{
+    --accent:#2b8a6e;
+    --accent-dim:rgba(43,138,110,0.35);
+    --danger:#c0392b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{
+    margin:0;padding:0;background:#000;color:#fff;height:100%;overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo",sans-serif;
+  }
+  #stage{position:fixed;inset:0;background:#000;}
+  #camera{
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#111;
+  }
+  #idleMsg{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#888;font-size:14px;text-align:center;padding:20px;
+  }
+
+  /* top overlay text */
+  .ov-top{
+    position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;right:10px;
+    display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none;
+  }
+  .ov-box{
+    background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);
+    border-radius:10px;padding:8px 12px;line-height:1.5;
+  }
+  .ov-left .l1{font-size:15px;font-weight:700;}
+  .ov-left .l2{font-size:12.5px;color:#e6e6e6;}
+  .ov-left .l3{font-size:12.5px;color:#ffd27a;font-weight:700;}
+  .ov-left .l4{font-size:11px;color:#bbb;margin-top:2px;}
+  .ov-right{text-align:right;font-size:10.5px;color:#cfe;min-width:120px;}
+
+  .settings-btn{
+    position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;
+    width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,0.5);
+    display:flex;align-items:center;justify-content:center;z-index:20;border:none;color:#fff;
+  }
+  .ov-top{right:56px;}
+
+  /* left sidebar - component select */
+  .sidebar{
+    position:absolute;left:8px;top:50%;transform:translateY(-50%);
+    display:flex;flex-direction:column;gap:8px;z-index:15;
+  }
+  .comp-btn{
+    width:60px;padding:9px 4px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.35);
+    background:rgba(0,0,0,0.45);color:#fff;font-size:12px;font-weight:600;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+  }
+  .comp-btn .en{font-size:8.5px;color:#bbb;font-weight:400;}
+  .comp-btn.active{background:var(--accent);border-color:var(--accent);}
+
+  /* bottom quick damage keys */
+  .bottom-bar{
+    position:absolute;left:8px;right:8px;bottom:calc(96px + env(safe-area-inset-bottom));
+    display:grid;grid-template-columns:repeat(3,1fr);gap:6px;z-index:15;
+  }
+  .dmg-btn{
+    padding:11px 4px;border-radius:10px;border:none;font-size:12.5px;font-weight:700;color:#fff;
+    background:rgba(40,40,40,0.75);
+  }
+  .dmg-btn.active{background:var(--accent);box-shadow:0 0 0 2px rgba(255,255,255,0.5) inset;}
+  .dmg-btn.other{background:rgba(90,90,90,0.75);}
+
+  /* capture button */
+  .capture-wrap{
+    position:absolute;right:18px;top:50%;transform:translateY(-50%);z-index:16;
+  }
+  .capture-btn{
+    width:74px;height:74px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,0.35);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .capture-btn:active{transform:scale(0.93);}
+  .capture-btn .dot{width:56px;height:56px;border-radius:50%;background:#fff;border:2px solid #222;}
+
+  /* preview modal */
+  .modal{
+    position:fixed;inset:0;background:#000;z-index:40;display:none;flex-direction:column;
+  }
+  .modal.show{display:flex;}
+  .modal img{flex:1;width:100%;object-fit:contain;background:#000;}
+  .save-hint{
+    text-align:center;font-size:13px;color:#ffd27a;padding:10px 16px;background:#111;
+  }
+  .modal-actions{
+    display:flex;gap:10px;padding:14px 14px calc(14px + env(safe-area-inset-bottom));background:#111;
+  }
+  .modal-actions button{
+    flex:1;padding:16px;border-radius:10px;border:none;font-size:16px;font-weight:700;
+  }
+  .btn-retake{background:#333;color:#fff;}
+  .btn-save{background:var(--accent);color:#fff;}
+
+  /* settings modal */
+  .sheet{
+    position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:50;display:none;
+    align-items:flex-end;
+  }
+  .sheet.show{display:flex;}
+  .sheet-inner{
+    width:100%;background:#161616;border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+  }
+  .sheet-inner h3{margin:0 0 14px;font-size:16px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11.5px;color:#999;margin-bottom:5px;font-weight:700;letter-spacing:.03em;}
+  .field input[type=text]{
+    width:100%;padding:11px;border-radius:8px;border:1px solid #333;background:#222;color:#fff;font-size:15px;
+  }
+  .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid #2a2a2a;font-size:14px;}
+  .toggle-row input{width:20px;height:20px;}
+  .sheet-close{
+    width:100%;padding:13px;margin-top:8px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-weight:700;font-size:15px;
+  }
+
+  .toast{
+    position:fixed;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    background:rgba(20,20,20,0.95);color:#fff;padding:10px 18px;border-radius:20px;font-size:13.5px;
+    opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;white-space:nowrap;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="idleMsg">부재/손상을 먼저 선택하고<br>오른쪽 촬영 버튼을 누르세요</div>
+  <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none;">
+
+  <button class="settings-btn" id="settingsBtn">⚙︎</button>
+
+  <div class="ov-top">
+    <div class="ov-box ov-left">
+      <div class="l1" id="ovSite">현장명 미입력</div>
+      <div class="l2" id="ovMeta"></div>
+      <div class="l3" id="ovDamage"></div>
+      <div class="l4" id="ovDate"></div>
+    </div>
+    <div class="ov-box ov-right" id="ovGps">GPS 대기중</div>
+  </div>
+
+  <div class="sidebar" id="sidebar"></div>
+  <div class="bottom-bar" id="bottomBar"></div>
+
+  <div class="capture-wrap">
+    <button class="capture-btn" id="captureBtn"><span class="dot"></span></button>
+  </div>
+</div>
+
+<div class="modal" id="previewModal">
+  <img id="previewImg" src="">
+  <div class="save-hint">👆 사진을 길게 눌러 <b>"이미지 저장"</b>을 선택하면 사진첩에 저장됩니다</div>
+  <div class="modal-actions">
+    <button class="btn-retake" id="retakeBtn">다시 찍기</button>
+    <button class="btn-save" id="saveBtn">공유 시트로 저장 시도</button>
+  </div>
+</div>
+
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-inner">
+    <h3>현장 정보 설정</h3>
+    <div class="field"><label>현장명</label><input type="text" id="siteName" placeholder="예: 제천-단양 교량 정밀안전진단"></div>
+    <div class="field"><label>점검자</label><input type="text" id="inspector" placeholder="점검자 이름"></div>
+    <div class="toggle-row"><span>GPS 표시</span><input type="checkbox" id="gpsToggle" checked></div>
+    <div class="toggle-row"><span>저장 해상도 낮추기 (용량/처리 절감)</span><input type="checkbox" id="lowPowerToggle"></div>
+    <button class="sheet-close" id="settingsClose">완료</button>
+  </div>
+</div>
+
+<canvas id="workCanvas" style="display:none;"></canvas>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const idleMsg = $('idleMsg'), stage = $('stage'), fileInput = $('fileInput');
+  const sidebar = $('sidebar'), bottomBar = $('bottomBar');
+  const ovSite = $('ovSite'), ovMeta = $('ovMeta'), ovDamage = $('ovDamage'), ovDate = $('ovDate'), ovGps = $('ovGps');
+  const captureBtn = $('captureBtn');
+  const previewModal = $('previewModal'), previewImg = $('previewImg'), retakeBtn = $('retakeBtn'), saveBtn = $('saveBtn');
+  const settingsBtn = $('settingsBtn'), settingsSheet = $('settingsSheet'), settingsClose = $('settingsClose');
+  const siteNameInput = $('siteName'), inspectorInput = $('inspector'), gpsToggle = $('gpsToggle'), lowPowerToggle = $('lowPowerToggle');
+  const workCanvas = $('workCanvas'), toast = $('toast');
+
+  // ---- component / damage config ----
+  const COMPONENTS = [
+    {id:'교대', en:'Abutment'},
+    {id:'교각', en:'Pier'},
+    {id:'거더', en:'Girder'},
+    {id:'슬래브', en:'Slab'},
+    {id:'기타', en:'Other'}
+  ];
+  const DAMAGE_MAP = {
+    '교대': ['균열','누수','백태','부식','침하'],
+    '교각': ['균열','박리','누수','부식','백태'],
+    '거더': ['균열','박리','누수','처짐','강재부식'],
+    '슬래브': ['균열','박리','누수','백태','파손'],
+    '기타': ['균열','박리','누수','부식','백태']
+  };
+
+  let state = {
+    component: null,
+    damage: null,
+    crackWidth: null,
+    lat: null, lon: null, alt: null,
+    stream: null,
+    pendingFile: null
+  };
+
+  // restore saved setup values
+  ['siteName_v','inspector_v'].forEach(()=>{});
+  siteNameInput.value = localStorage.getItem('board_site') || '';
+  inspectorInput.value = localStorage.getItem('board_inspector') || '';
+  siteNameInput.addEventListener('input', ()=>{ localStorage.setItem('board_site', siteNameInput.value); updateOverlay(); });
+  inspectorInput.addEventListener('input', ()=>{ localStorage.setItem('board_inspector', inspectorInput.value); updateOverlay(); });
+
+  // ---- render sidebar ----
+  function renderSidebar(){
+    sidebar.innerHTML = '';
+    COMPONENTS.forEach(c=>{
+      const btn = document.createElement('button');
+      btn.className = 'comp-btn' + (state.component===c.id ? ' active':'');
+      btn.innerHTML = `${c.id}<span class="en">${c.en}</span>`;
+      btn.addEventListener('click', ()=> selectComponent(c.id));
+      sidebar.appendChild(btn);
+    });
+  }
+  function selectComponent(id){
+    state.component = id;
+    state.damage = null;
+    state.crackWidth = null;
+    renderSidebar();
+    renderBottomBar();
+    updateOverlay();
+  }
+
+  // ---- render bottom damage bar ----
+  function renderBottomBar(){
+    bottomBar.innerHTML = '';
+    const list = state.component ? (DAMAGE_MAP[state.component]||[]) : [];
+    list.forEach(d=>{
+      const btn = document.createElement('button');
+      btn.className = 'dmg-btn' + (state.damage===d ? ' active':'');
+      btn.textContent = d;
+      btn.addEventListener('click', ()=> selectDamage(d));
+      bottomBar.appendChild(btn);
+    });
+    const otherBtn = document.createElement('button');
+    otherBtn.className = 'dmg-btn other' + (state.damage==='기타손상' ? ' active':'');
+    otherBtn.textContent = '기타손상';
+    otherBtn.addEventListener('click', ()=> selectDamage('기타손상'));
+    bottomBar.appendChild(otherBtn);
+  }
+  function selectDamage(d){
+    state.damage = d;
+    if(d === '균열'){
+      const v = window.prompt('균열 폭 (mm) — 취소 시 폭 없이 기록됩니다', state.crackWidth || '');
+      state.crackWidth = (v && v.trim()) ? v.trim() : null;
+    } else {
+      state.crackWidth = null;
+    }
+    renderBottomBar();
+    updateOverlay();
+  }
+
+  // ---- overlay text ----
+  function fmtDate(){
+    const d = new Date();
+    const p = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  function updateOverlay(){
+    ovSite.textContent = siteNameInput.value.trim() || '현장명 미입력';
+    const metaParts = [];
+    if(state.component) metaParts.push('부재: ' + state.component);
+    if(inspectorInput.value.trim()) metaParts.push('점검자: ' + inspectorInput.value.trim());
+    ovMeta.textContent = metaParts.join('   ·   ');
+    let dmgText = '';
+    if(state.damage){
+      dmgText = '손상: ' + state.damage;
+      if(state.crackWidth) dmgText += ` ${state.crackWidth}mm`;
+    }
+    ovDamage.textContent = dmgText;
+    ovDate.textContent = fmtDate();
+
+    if(gpsToggle.checked && state.lat!=null){
+      ovGps.textContent = `GPS: N${state.lat.toFixed(4)}° E${state.lon.toFixed(4)}°` + (state.alt!=null ? `\n고도: ${Math.round(state.alt)}m` : '');
+      ovGps.style.whiteSpace = 'pre-line';
+    } else if(gpsToggle.checked){
+      ovGps.textContent = 'GPS 탐색중...';
+    } else {
+      ovGps.textContent = '';
+    }
+  }
+  setInterval(updateOverlay, 20000);
+
+  // ---- geolocation (low power: no high accuracy, infrequent) ----
+  let geoWatchId = null;
+  function startGeo(){
+    if(!navigator.geolocation) return;
+    geoWatchId = navigator.geolocation.watchPosition(pos=>{
+      state.lat = pos.coords.latitude;
+      state.lon = pos.coords.longitude;
+      state.alt = pos.coords.altitude;
+      updateOverlay();
+    }, ()=>{ ovGps.textContent = 'GPS 사용 불가'; }, {
+      enableHighAccuracy:false, maximumAge:20000, timeout:15000
+    });
+  }
+  function stopGeo(){
+    if(geoWatchId!=null && navigator.geolocation) navigator.geolocation.clearWatch(geoWatchId);
+    geoWatchId = null;
+  }
+  gpsToggle.addEventListener('change', ()=>{
+    if(gpsToggle.checked) startGeo(); else stopGeo();
+    updateOverlay();
+  });
+
+  // ---- settings sheet ----
+  settingsBtn.addEventListener('click', ()=> settingsSheet.classList.add('show'));
+  settingsClose.addEventListener('click', ()=> settingsSheet.classList.remove('show'));
+
+  // ---- capture ----
+  function drawOverlayOnCanvas(ctx, w, h){
+    const pad = Math.round(w*0.025);
+    ctx.textBaseline = 'top';
+
+    // top-left box
+    const lines = [];
+    lines.push({t: siteNameInput.value.trim() || '현장명 미입력', size: Math.round(w*0.028), weight:700, color:'#fff'});
+    const metaParts = [];
+    if(state.component) metaParts.push('부재: ' + state.component);
+    if(inspectorInput.value.trim()) metaParts.push('점검자: ' + inspectorInput.value.trim());
+    if(metaParts.length) lines.push({t: metaParts.join('   ·   '), size: Math.round(w*0.02), weight:500, color:'#eee'});
+    if(state.damage){
+      let dmgText = '손상: ' + state.damage + (state.crackWidth ? ` ${state.crackWidth}mm` : '');
+      lines.push({t: dmgText, size: Math.round(w*0.022), weight:700, color:'#ffd27a'});
+    }
+    lines.push({t: fmtDate(), size: Math.round(w*0.017), weight:500, color:'#ccc'});
+
+    let boxH = pad*2;
+    lines.forEach(l=>{ boxH += l.size*1.35; });
+    let boxW = 0;
+    lines.forEach(l=>{
+      ctx.font = `${l.weight} ${l.size}px -apple-system, sans-serif`;
+      boxW = Math.max(boxW, ctx.measureText(l.t).width);
+    });
+    boxW += pad*2;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(pad, pad, Math.min(boxW, w-pad*2), boxH);
+    let y = pad + pad*0.6;
+    lines.forEach(l=>{
+      ctx.font = `${l.weight} ${l.size}px -apple-system, sans-serif`;
+      ctx.fillStyle = l.color;
+      ctx.fillText(l.t, pad*1.6, y);
+      y += l.size*1.35;
+    });
+
+    // top-right GPS box
+    if(gpsToggle.checked && state.lat!=null){
+      const gpsLine1 = `GPS: N${state.lat.toFixed(4)}° E${state.lon.toFixed(4)}°`;
+      const gpsLine2 = state.alt!=null ? `고도: ${Math.round(state.alt)}m` : '';
+      const gsize = Math.round(w*0.016);
+      ctx.font = `600 ${gsize}px -apple-system, sans-serif`;
+      const gw = Math.max(ctx.measureText(gpsLine1).width, ctx.measureText(gpsLine2).width) + pad*2;
+      const gh = gpsLine2 ? gsize*1.35*2 + pad : gsize*1.35 + pad;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(w-pad-gw, pad, gw, gh);
+      ctx.fillStyle = '#cfe';
+      ctx.textAlign = 'right';
+      ctx.fillText(gpsLine1, w-pad*1.6, pad+pad*0.5);
+      if(gpsLine2) ctx.fillText(gpsLine2, w-pad*1.6, pad+pad*0.5+gsize*1.35);
+      ctx.textAlign = 'left';
+    }
+  }
+
+  captureBtn.addEventListener('click', ()=>{
+    fileInput.value = '';
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      img.onload = ()=> processCaptured(img);
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function processCaptured(img){
+    const low = lowPowerToggle.checked;
+    const maxW = low ? 1000 : 1600;
+    const scale = Math.min(1, maxW / img.width);
+    const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+    workCanvas.width = w; workCanvas.height = h;
+    const ctx = workCanvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    drawOverlayOnCanvas(ctx, w, h);
+
+    // data URL: file:// 환경에서도 확실히 표시되고 길게 눌러 저장 가능
+    const dataUrl = workCanvas.toDataURL('image/jpeg', 0.9);
+    previewImg.src = dataUrl;
+    state.pendingDataUrl = dataUrl;
+    previewModal.classList.add('show');
+
+    // 공유 시트용 파일도 미리 준비
+    workCanvas.toBlob((blob)=>{
+      if(blob){
+        state.pendingFile = new File([blob], `점검사진_${Date.now()}.jpg`, {type:'image/jpeg'});
+      }
+    }, 'image/jpeg', 0.9);
+  }
+
+  retakeBtn.addEventListener('click', ()=>{
+    previewModal.classList.remove('show');
+    state.pendingFile = null;
+  });
+
+  saveBtn.addEventListener('click', async ()=>{
+    const file = state.pendingFile;
+    if(file && navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({ files:[file], title:'점검사진' });
+        showToast('공유 완료');
+        previewModal.classList.remove('show');
+        return;
+      }catch(err){
+        if(err.name === 'AbortError') return;
+        // fall through to data URL download
+      }
+    }
+    if(state.pendingDataUrl){
+      const a = document.createElement('a');
+      a.href = state.pendingDataUrl;
+      a.download = `점검사진_${Date.now()}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('다운로드 시작 — 안 되면 사진을 길게 눌러 저장하세요');
+    }
+  });
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(()=> toast.classList.remove('show'), 2200);
+  }
+
+  // ---- init ----
+  renderSidebar();
+  renderBottomBar();
+  updateOverlay();
+  startGeo();
+})();
+</script>
+</body>
+</html>
