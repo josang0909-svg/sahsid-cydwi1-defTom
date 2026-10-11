@@ -1,0 +1,56 @@
+# 아이폰 앱(.ipa) 자동 빌드.
+# ios/ 폴더가 바뀌면 빌드하고, main이면 릴리스와 SideStore 소스(source.json)를 갱신한다.
+# 화면(index.html)만 바뀐 경우는 앱이 GitHub Pages에서 바로 불러오므로 다시 빌드할 필요가 없다.
+name: iOS 앱 빌드
+
+on:
+  push:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: XcodeGen 설치
+        run: brew install xcodegen
+
+      - name: 빌드
+        run: |
+          cp index.html ios/Board/index.html
+          cd ios
+          xcodegen generate
+          xcodebuild -project Board.xcodeproj -scheme Board -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION=1.0.${{ github.run_number }} \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            build
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/Board.app Payload/
+          zip -qry ../Board.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Board-ipa
+          path: Board.ipa
+
+      - name: 릴리스와 SideStore 소스 갱신
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=1.0.${{ github.run_number }}
+          gh release create "ios-v$V" Board.ipa --title "아이폰 앱 $V" --notes "SideStore용 자동 빌드"
+          URL="https://github.com/${{ github.repository }}/releases/download/ios-v$V/Board.ipa"
+          python3 ios/make_source.py "$V" "$URL" "$(stat -f%z Board.ipa)" source.json
+          gh release view sidestore >/dev/null 2>&1 || \
+            gh release create sidestore --title "SideStore 소스" --notes "SideStore에 이 주소를 추가하세요: https://github.com/${{ github.repository }}/releases/download/sidestore/source.json"
+          gh release upload sidestore source.json --clobber

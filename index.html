@@ -465,6 +465,8 @@
   var geo = { lat:null, lon:null, alt:null };
   var pendingStamped = null, pendingOrig = null, pendingDataUrl = null;
   var isAndroid = /Android/i.test(navigator.userAgent);
+  // 아이폰 앱(SideStore 설치본) 안에서 실행 중이면 사진 앱에 바로 저장
+  var nativeApp = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.board);
   var detailMember = null;
   var screenKind = null;
   var screenStack = [];
@@ -1359,8 +1361,8 @@
 
     pendingDataUrl = workCanvas.toDataURL('image/jpeg', 0.92);
     $('previewImg').src = pendingDataUrl;
-    $('saveHint').innerHTML = isAndroid
-      ? (settings.saveOrig !== false ? '저장을 누르면 <b>각인본 + 원본 2장</b>이 갤러리에 바로 저장됩니다.' : '저장을 누르면 각인본이 갤러리에 바로 저장됩니다.')
+    $('saveHint').innerHTML = (isAndroid || nativeApp)
+      ? (settings.saveOrig !== false ? '저장을 누르면 <b>각인본 + 원본 2장</b>이 사진첩에 바로 저장됩니다.' : '저장을 누르면 각인본이 사진첩에 바로 저장됩니다.')
       : settings.saveOrig !== false
       ? '저장을 누르면 <b>각인본 + 원본 2장</b>이 공유 시트에 올라갑니다. "이미지 저장"을 선택하세요.'
       : '저장을 누르면 각인본이 공유 시트에 올라갑니다. 사진을 길게 눌러 저장해도 됩니다.';
@@ -1391,10 +1393,29 @@
     $('previewModal').classList.remove('show');
   }
 
+  // 아이폰 앱: 사진을 앱으로 넘겨 사진 앱(카메라 롤)에 저장
+  function nativeSave(files){
+    Promise.all(files.map(function(f){
+      return new Promise(function(res, rej){
+        var r = new FileReader();
+        r.onload = function(){ res(r.result); };
+        r.onerror = rej;
+        r.readAsDataURL(f);
+      });
+    })).then(function(urls){
+      window.webkit.messageHandlers.board.postMessage({ type:'save', images:urls });
+    }).catch(function(){ showToast('저장 실패'); });
+  }
+  window.__boardSaved = function(ok, msg){
+    showToast(ok ? '사진 앱에 저장 완료' : (msg || '저장 실패'));
+    if(ok) $('previewModal').classList.remove('show');
+  };
+
   $('saveBtn').addEventListener('click', function(){
     var files = [];
     if(pendingStamped) files.push(pendingStamped);
     if(settings.saveOrig !== false && pendingOrig) files.push(pendingOrig);
+    if(nativeApp && files.length){ nativeSave(files); return; }
     if(isAndroid && files.length){ directDownload(files); return; }
     if(files.length && navigator.share && navigator.canShare && navigator.canShare({files:files})){
       navigator.share({ files:files }).then(function(){
@@ -1430,7 +1451,7 @@
 })();
 </script>
 <script>
-if('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js'); }); }
+if('serviceWorker' in navigator && location.protocol === 'https:'){ window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js'); }); }
 </script>
 </body>
 </html>
