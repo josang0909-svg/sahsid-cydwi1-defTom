@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="현장 보드판">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAADoElEQVR4nO3cQW7bMBRFUabobtK1taNuIh1lb1lQBwaMoM1TZFukQv5zpklhgbz+imTVT88vPxt85NvZB8DXJQ4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEImDSBxE4iASB5E4iMRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEH0/+wCO8fb79exD+NePP7/OPoRHPc3+xfhfMIv3pk5k7tPKFy+jzXCEGyaOY5Z1n+U4/zdrHHOt+FxHezVrHAwwZRwzvhFnPOYp42AMcRCJg0gcROIgEgeROIjEQSQOonM+sp/xduHpxn/6PzQOTRxiWCXjTivKOMqwlRwxOWTRSe8R0n1yKKOf3mvbNw5l9NZ1hV3KEnWMw9gYo98614pDGSN1Wm2nFSJxEHWJwzllvB5rbnIQiYNIHETiIBIHkTiIFvlmn0dsfPBd/Jq8bhx7Hoa4/k7NSirGccczMpd/Ui2RWnE8+OhUtUQK/UF61EN1U38H3E2qxHHsjhbpo0QcPfayQh/rx9FvF5fvY/E4eu/f2n2sHMeYnVu4j1qXssmHV6cL7/pOy06OnVv79vs13bfY+NF9rzWdZePYY8/e17nl9b8149jzVt6/63t+c8nhsWYcn7p1HtScHxXjuG+nC/axYBxnTfj1ziwLxrHtkQFQbXiUi4P9xEEkDiJxEImDSBxE5eJ45G7Eencyti0Yx1l3I9a7C7JgHJ+6bwBUGxutZhzt9p0uWEZbNY5jP2Q/9gGAiawZx043/XfZgpaNY/8Tfmn7N35032tNxwPGrdUeDxuWnRxt1Bt61bHR1o6j9d+5hctoy8fReu7f2mW0CnG0Pru4fBmtSBzt6L2sUEarE0c7bkeLlNGqXcpe9vXuC9c6WVzUiuPijkSqZXFRMY6L6377HtKkbhxXxQvYUOgPUm4lDiJxEImDSBxE4iASB5E4iLrE4am78XqsuclBJA6iXnE4s4zUabU7Tg59jNFvnZ1WiPrGYXj01nWFu08OffTTe22fnl9+dn2BK8/UHGjMW27c3xxGyFGGreS4yfGeKXKH8e+uc+JgCi5licRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEImDSBxE4iASB5E4iMRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIH0V/G19ZfgFBNKAAAAABJRU5ErkJggg==">
 <style>
   :root{ --accent:#2b8a6e; --line:#2c3136; --card:#161a1d; --bg:#0f1113; --muted:#8b9298; }
@@ -1408,6 +1409,9 @@
   renderHome();
   if(settings.gps) startGeo();
 })();
+</script>
+<script>
+if('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js'); }); }
 </script>
 </body>
 </html>
