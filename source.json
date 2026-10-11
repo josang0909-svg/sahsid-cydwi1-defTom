@@ -4,21 +4,21 @@
   "website": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom",
   "apps": [
     {
-      "name": "현장 보드판",
+      "name": "FieldBoard",
       "bundleIdentifier": "com.josang0909.fieldboard",
       "developerName": "josang0909",
-      "localizedDescription": "현장 사진 보드판 (개인용)",
+      "localizedDescription": "현장 보드판: 현장 사진 보드판 (개인용)",
       "iconURL": "https://raw.githubusercontent.com/josang0909-svg/sahsid-cydwi1-defTom/main/icon-512.png",
-      "version": "1.0.3",
-      "versionDate": "2026-10-11T15:21:06Z",
-      "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.3/Board.ipa",
-      "size": 119005,
+      "version": "1.0.4",
+      "versionDate": "2026-10-11T15:25:24Z",
+      "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.4/Board.ipa",
+      "size": 119463,
       "versions": [
         {
-          "version": "1.0.3",
-          "date": "2026-10-11T15:21:06Z",
-          "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.3/Board.ipa",
-          "size": 119005,
+          "version": "1.0.4",
+          "date": "2026-10-11T15:25:24Z",
+          "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.4/Board.ipa",
+          "size": 119463,
           "minOSVersion": "15.0"
         }
       ]
