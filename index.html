@@ -464,6 +464,7 @@
 
   var geo = { lat:null, lon:null, alt:null };
   var pendingStamped = null, pendingOrig = null, pendingDataUrl = null;
+  var isAndroid = /Android/i.test(navigator.userAgent);
   var detailMember = null;
   var screenKind = null;
   var screenStack = [];
@@ -1358,7 +1359,9 @@
 
     pendingDataUrl = workCanvas.toDataURL('image/jpeg', 0.92);
     $('previewImg').src = pendingDataUrl;
-    $('saveHint').innerHTML = settings.saveOrig !== false
+    $('saveHint').innerHTML = isAndroid
+      ? (settings.saveOrig !== false ? '저장을 누르면 <b>각인본 + 원본 2장</b>이 갤러리에 바로 저장됩니다.' : '저장을 누르면 각인본이 갤러리에 바로 저장됩니다.')
+      : settings.saveOrig !== false
       ? '저장을 누르면 <b>각인본 + 원본 2장</b>이 공유 시트에 올라갑니다. "이미지 저장"을 선택하세요.'
       : '저장을 누르면 각인본이 공유 시트에 올라갑니다. 사진을 길게 눌러 저장해도 됩니다.';
     $('previewModal').classList.add('show');
@@ -1373,10 +1376,26 @@
     pendingStamped = null; pendingOrig = null; pendingDataUrl = null;
   });
 
+  // 안드로이드: 공유 시트 없이 바로 내려받기 (갤러리 'Download' 앨범에 자동 저장)
+  function directDownload(files){
+    files.forEach(function(f, i){
+      setTimeout(function(){
+        var url = URL.createObjectURL(f);
+        var a = document.createElement('a');
+        a.href = url; a.download = f.name;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      }, i * 400);
+    });
+    showToast('저장 완료');
+    $('previewModal').classList.remove('show');
+  }
+
   $('saveBtn').addEventListener('click', function(){
     var files = [];
     if(pendingStamped) files.push(pendingStamped);
     if(settings.saveOrig !== false && pendingOrig) files.push(pendingOrig);
+    if(isAndroid && files.length){ directDownload(files); return; }
     if(files.length && navigator.share && navigator.canShare && navigator.canShare({files:files})){
       navigator.share({ files:files }).then(function(){
         showToast('저장 완료');
