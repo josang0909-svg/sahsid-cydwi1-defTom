@@ -11,10 +11,11 @@ source = {
     "identifier": "com.josang0909.fieldboard.source",
     "website": repo,
     "apps": [{
-        "name": "현장 보드판",
+        # SideStore가 이 이름으로 애플 App ID를 만들 수 있어 영문만 사용
+        "name": "FieldBoard",
         "bundleIdentifier": "com.josang0909.fieldboard",
         "developerName": "josang0909",
-        "localizedDescription": "현장 사진 보드판 (개인용)",
+        "localizedDescription": "현장 보드판: 현장 사진 보드판 (개인용)",
         "iconURL": icon,
         "version": version,
         "versionDate": date,

@@ -1,0 +1,2 @@
+/* 홈 화면에는 한글 이름으로 표시 (기본 이름은 SideStore 등록용 영문) */
+"CFBundleDisplayName" = "현장 보드판";

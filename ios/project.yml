@@ -13,7 +13,9 @@ targets:
     info:
       path: Board/Info.plist
       properties:
-        CFBundleDisplayName: 현장 보드판
+        # 애플 App ID 이름은 영문만 허용되어 기본값은 영문, 한글 이름은 ko.lproj에서 지정
+        CFBundleDisplayName: FieldBoard
+        CFBundleDevelopmentRegion: en
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
