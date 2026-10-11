@@ -8,14 +8,27 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="현장 보드판">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#181616">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAADoElEQVR4nO3cQW7bMBRFUabobtK1taNuIh1lb1lQBwaMoM1TZFukQv5zpklhgbz+imTVT88vPxt85NvZB8DXJQ4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEImDSBxE4iASB5E4iMRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEH0/+wCO8fb79exD+NePP7/OPoRHPc3+xfhfMIv3pk5k7tPKFy+jzXCEGyaOY5Z1n+U4/zdrHHOt+FxHezVrHAwwZRwzvhFnPOYp42AMcRCJg0gcROIgEgeROIjEQSQOonM+sp/xduHpxn/6PzQOTRxiWCXjTivKOMqwlRwxOWTRSe8R0n1yKKOf3mvbNw5l9NZ1hV3KEnWMw9gYo98614pDGSN1Wm2nFSJxEHWJwzllvB5rbnIQiYNIHETiIBIHkTiIFvlmn0dsfPBd/Jq8bhx7Hoa4/k7NSirGccczMpd/Ui2RWnE8+OhUtUQK/UF61EN1U38H3E2qxHHsjhbpo0QcPfayQh/rx9FvF5fvY/E4eu/f2n2sHMeYnVu4j1qXssmHV6cL7/pOy06OnVv79vs13bfY+NF9rzWdZePYY8/e17nl9b8149jzVt6/63t+c8nhsWYcn7p1HtScHxXjuG+nC/axYBxnTfj1ziwLxrHtkQFQbXiUi4P9xEEkDiJxEImDSBxE5eJ45G7Eencyti0Yx1l3I9a7C7JgHJ+6bwBUGxutZhzt9p0uWEZbNY5jP2Q/9gGAiawZx043/XfZgpaNY/8Tfmn7N35032tNxwPGrdUeDxuWnRxt1Bt61bHR1o6j9d+5hctoy8fReu7f2mW0CnG0Pru4fBmtSBzt6L2sUEarE0c7bkeLlNGqXcpe9vXuC9c6WVzUiuPijkSqZXFRMY6L6377HtKkbhxXxQvYUOgPUm4lDiJxEImDSBxE4iASB5E4iLrE4am78XqsuclBJA6iXnE4s4zUabU7Tg59jNFvnZ1WiPrGYXj01nWFu08OffTTe22fnl9+dn2BK8/UHGjMW27c3xxGyFGGreS4yfGeKXKH8e+uc+JgCi5licRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEImDSBxE4iASB5E4iMRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIH0V/G19ZfgFBNKAAAAABJRU5ErkJggg==">
 <style>
-  :root{ --accent:#2b8a6e; --line:#2c3136; --card:#161a1d; --bg:#0f1113; --muted:#8b9298; }
+  /* 색상표 — 현장내비와 같은 Kanagawa Dragon. [화면 설정]에서 바꾼 값은 아래 변수를 덮어쓴다 */
+  :root{
+    --bg:#181616; --card:#1D1C19; --card-2:#282727; --line:#393836;
+    --accent:#b6927b; --accent-dim:#6b5344; --on-accent:#181616;
+    --text:#c5c9c5; --muted:#9e9b93; --danger:#c4746e;
+    --field:#12120f;
+    /* 노치·홈 막대 피하기 */
+    --sl:env(safe-area-inset-left, 0px); --sr:env(safe-area-inset-right, 0px);
+    --st:env(safe-area-inset-top, 0px); --sb:env(safe-area-inset-bottom, 0px);
+    /* 화면 설정 값 (기본) */
+    --zoom:1; --side-w:80px; --side-fs:11.5px; --side-pad:10px;
+    --dmg-fs:11.5px; --dmg-pad:12px; --shutter:74px; --cam-alpha:0.55;
+    --r-btn:10px; --cam-gap:6px; --board-scale:1;
+  }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
   html,body{
-    margin:0;padding:0;background:#000;color:#fff;height:100%;overflow:hidden;
+    margin:0;padding:0;background:var(--bg);color:var(--text);height:100%;overflow:hidden;
     font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo",sans-serif;
   }
   #fileInput{display:none;}
@@ -28,24 +41,38 @@
 
   .scr-head{
     display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--bg);z-index:5;
-    padding:calc(12px + env(safe-area-inset-top)) 14px 12px;border-bottom:1px solid var(--line);
+    padding:calc(12px + var(--st)) calc(14px + var(--sr)) 12px calc(14px + var(--sl));border-bottom:1px solid var(--line);
   }
   .scr-head h2{margin:0;font-size:16.5px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .back-btn{width:36px;height:36px;flex:none;border-radius:10px;background:var(--card);border:1px solid var(--line);color:#fff;font-size:17px;}
-  .scr-body{padding:14px 16px calc(34px + env(safe-area-inset-bottom));}
+  .back-btn{width:36px;height:36px;flex:none;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:17px;}
+  .scr-body{padding:14px calc(16px + var(--sr)) calc(34px + var(--sb)) calc(16px + var(--sl));zoom:var(--zoom);}
 
   .home-head{
     display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:6;background:var(--bg);
-    padding:calc(14px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line);
+    padding:calc(14px + var(--st)) calc(16px + var(--sr)) 12px calc(16px + var(--sl));border-bottom:1px solid var(--line);
   }
   .home-head .ht{flex:1;min-width:0;}
-  .home-head h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-0.02em;}
+  .home-head h1{margin:6px 0 0;font-size:19px;font-weight:800;letter-spacing:-0.02em;}
+  .mark{display:inline-block;font-family:"Courier New",monospace;font-size:11px;letter-spacing:3px;
+    color:var(--accent);border:1px solid var(--accent-dim);padding:2px 6px;border-radius:3px;}
+
+  /* 화면 설정 */
+  .tn-row{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);}
+  .tn-row:last-child{border-bottom:none;}
+  .tn-row .tn-l{width:118px;flex:none;font-size:13px;font-weight:600;}
+  .tn-row input[type=range]{flex:1;min-width:0;accent-color:var(--accent);}
+  .tn-row .tn-v{width:52px;flex:none;text-align:right;font-size:12.5px;color:var(--muted);font-family:"Courier New",monospace;}
+  .tn-step{width:34px;height:34px;flex:none;border-radius:8px;border:1px solid var(--line);background:var(--card-2);color:var(--text);font-size:16px;}
+  .tn-sw{display:flex;flex-wrap:wrap;gap:8px;flex:1;}
+  .tn-dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);padding:0;}
+  .tn-dot.on{border-color:var(--text);box-shadow:0 0 0 2px var(--bg) inset;}
+  .tn-dot.def{width:auto;padding:0 10px;border-radius:15px;background:var(--card-2);color:var(--text);font-size:11.5px;}
   .home-head p{margin:3px 0 0;font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .shoot-btn{
     flex:none;display:flex;align-items:center;gap:6px;padding:11px 15px;border-radius:11px;border:none;
-    background:var(--accent);color:#fff;font-size:14px;font-weight:800;
+    background:var(--accent);color:var(--on-accent);font-size:14px;font-weight:800;
   }
-  .shoot-btn:disabled{background:#2a2d30;color:#666;}
+  .shoot-btn:disabled{background:var(--card-2);color:var(--muted);}
 
   .sec{margin-top:18px;}
   .sec > .t{font-size:11.5px;font-weight:800;color:var(--muted);letter-spacing:.08em;margin-bottom:9px;padding-left:2px;}
@@ -54,11 +81,11 @@
   .frow{display:flex;align-items:stretch;border-bottom:1px solid var(--line);}
   .frow:last-child{border-bottom:none;}
   .frow .k{width:82px;flex:none;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;color:var(--muted);background:rgba(255,255,255,0.03);border-right:1px solid var(--line);}
-  .frow input{flex:1;min-width:0;padding:15px 12px;font-size:16px;background:transparent;border:none;color:#fff;user-select:text;}
+  .frow input{flex:1;min-width:0;padding:15px 12px;font-size:16px;background:transparent;border:none;color:var(--text);user-select:text;}
   .frow input:focus{outline:none;}
   .frow .arrow{width:50px;flex:none;background:transparent;border:none;border-left:1px solid var(--line);color:var(--accent);font-size:15px;}
 
-  .nav-row{display:flex;align-items:center;gap:10px;width:100%;padding:16px 14px;background:transparent;border:none;border-bottom:1px solid var(--line);color:#fff;text-align:left;}
+  .nav-row{display:flex;align-items:center;gap:10px;width:100%;padding:16px 14px;background:transparent;border:none;border-bottom:1px solid var(--line);color:var(--text);text-align:left;}
   .nav-row:last-child{border-bottom:none;}
   .nav-row:active{background:rgba(255,255,255,0.05);}
   .nav-row .nt{flex:1;min-width:0;font-size:14.5px;font-weight:600;}
@@ -66,9 +93,9 @@
   .nav-row .ar{color:var(--muted);font-size:15px;}
 
   .chips{display:flex;flex-wrap:wrap;gap:7px;}
-  .chip{padding:10px 15px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:#fff;font-size:13.5px;font-weight:600;}
-  .chip.on{background:var(--accent);border-color:var(--accent);}
-  .chip.warn{color:#c0554a;border-color:#4a2a26;}
+  .chip{padding:10px 15px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13.5px;font-weight:600;}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  .chip.warn{color:var(--danger);border-color:var(--line);}
 
   .setrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid var(--line);}
   .setrow:last-child{border-bottom:none;}
@@ -80,10 +107,10 @@
   .lblrow{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);}
   .lblrow:last-child{border-bottom:none;}
   .lblrow .n{width:26px;flex:none;font-size:12px;color:var(--muted);text-align:center;}
-  .lblrow input{flex:1;min-width:0;padding:11px;border-radius:8px;border:1px solid var(--line);background:#0d0f11;color:#fff;font-size:15px;user-select:text;}
+  .lblrow input{flex:1;min-width:0;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:15px;user-select:text;}
   .lblrow input:focus{outline:none;border-color:var(--accent);}
 
-  .prev-wrap{background:#22262a;border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;justify-content:center;}
+  .prev-wrap{background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;justify-content:center;}
   table.bprev{border-collapse:collapse;font-size:11.5px;}
   table.bprev td{border:1px solid #000;padding:4px 8px;line-height:1.35;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
   table.bprev .lb{font-weight:700;text-align:center;letter-spacing:.12em;}
@@ -91,85 +118,91 @@
   table.bprev.trans td{background:rgba(0,0,0,0.5);color:#fff;border-color:rgba(255,255,255,0.8);}
 
   .add-row{display:flex;gap:8px;margin-bottom:12px;}
-  .add-row input{flex:1;padding:12px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:#fff;font-size:15px;user-select:text;}
+  .add-row input{flex:1;padding:12px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px;user-select:text;}
   .add-row input:focus{outline:none;border-color:var(--accent);}
-  .add-row button{padding:12px 18px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-weight:700;font-size:14px;}
+  .add-row button{padding:12px 18px;border-radius:9px;border:none;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:14px;}
 
   .editor{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
   .opt{display:flex;align-items:center;gap:2px;padding:4px 8px 4px 2px;border-bottom:1px solid rgba(255,255,255,0.06);background:var(--card);}
   .opt:last-child{border-bottom:none;}
-  .opt.on{background:rgba(43,138,110,0.18);}
-  .opt.dragging{background:#232a2e;}
-  .opt .dh{width:36px;height:42px;flex:none;display:flex;align-items:center;justify-content:center;color:#6d757b;font-size:16px;touch-action:none;}
+  .opt.on{background:rgba(182,146,123,0.14);}
+  .opt.dragging{background:var(--card-2);}
+  .opt .dh{width:36px;height:42px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;touch-action:none;}
   .opt .lbl{flex:1;min-width:0;font-size:15px;padding:12px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .opt .lbl small{display:block;font-size:11px;color:var(--muted);margin-top:2px;}
   .opt .act{flex:none;padding:8px 8px;font-size:12.5px;background:none;border:none;color:var(--muted);font-weight:600;}
-  .opt .act.edit{color:#7fb6a2;}
-  .opt .act.del{color:#c0554a;}
+  .opt .act.edit{color:var(--accent);}
+  .opt .act.del{color:var(--danger);}
   .opt .ar{color:var(--muted);font-size:15px;padding-right:4px;}
 
   .hintline{font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:12px;}
 
   /* ===== 촬영 화면 ===== */
   #cam{position:fixed;inset:0;background:#000;display:none;z-index:20;}
+  /* 실시간 카메라: 웹은 video, 아이폰 앱은 화면 뒤의 카메라가 비쳐 보이도록 투명 */
+  #camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;display:none;background:#000;}
+  #cam.live.web #camVideo{display:block;}
+  html.live-cam, html.live-cam body, html.live-cam #cam{background:transparent;}
+  #cam.flash::after{content:'';position:absolute;inset:0;background:#fff;opacity:.55;z-index:50;pointer-events:none;}
   #cam.show{display:block;}
-  .cam-top{position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;right:10px;display:flex;align-items:center;gap:8px;z-index:20;}
-  .cam-back{width:38px;height:38px;flex:none;border-radius:50%;background:rgba(255,255,255,0.12);border:none;color:#fff;font-size:17px;}
+  .cam-top{position:absolute;top:calc(10px + var(--st));left:calc(10px + var(--sl));right:calc(10px + var(--sr));display:flex;align-items:center;gap:8px;z-index:20;}
+  .cam-back{width:38px;height:38px;flex:none;border-radius:50%;background:rgba(24,22,22,var(--cam-alpha));border:1px solid var(--line);border:none;color:var(--text);font-size:17px;}
   .cam-title{flex:1;min-width:0;font-size:13px;line-height:1.35;}
   .cam-title b{display:block;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .cam-title span{color:#9aa1a6;font-size:11px;}
-  #ovGps{font-size:10px;color:#9fd8c4;text-align:right;line-height:1.4;white-space:pre-line;flex:none;}
+  .cam-title span{color:var(--muted);font-size:11px;}
+  #ovGps{font-size:10px;color:var(--accent);text-align:right;line-height:1.4;white-space:pre-line;flex:none;}
 
-  .bprev-cam{position:absolute;top:calc(60px + env(safe-area-inset-top));left:96px;z-index:18;border-collapse:collapse;font-size:10.5px;pointer-events:none;}
+  .bprev-cam{position:absolute;top:calc(60px + var(--st));left:calc(var(--side-w) + 16px + var(--sl));z-index:18;border-collapse:collapse;font-size:calc(10.5px * var(--board-scale));pointer-events:none;}
   .bprev-cam td{border:1px solid #000;padding:3px 6px;line-height:1.3;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
   .bprev-cam .lb{font-weight:700;text-align:center;letter-spacing:.1em;}
   .bprev-cam.white td{background:#fff;color:#000;}
   .bprev-cam.trans td{background:rgba(0,0,0,0.45);color:#fff;border-color:rgba(255,255,255,0.8);}
 
   .sidebar{
-    position:absolute;left:6px;top:calc(56px + env(safe-area-inset-top));
-    bottom:calc(24px + env(safe-area-inset-bottom));width:80px;
-    display:flex;flex-direction:column;gap:6px;z-index:15;
+    position:absolute;left:calc(6px + var(--sl));top:calc(56px + var(--st));
+    bottom:calc(24px + var(--sb));width:var(--side-w);
+    display:flex;flex-direction:column;gap:var(--cam-gap);z-index:15;
     overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 2px 4px;
   }
   .sidebar::-webkit-scrollbar{display:none;}
   .comp-btn{
-    flex:none;width:100%;padding:10px 4px;border-radius:11px;border:1.5px solid rgba(255,255,255,0.3);
-    background:rgba(0,0,0,0.55);color:#fff;font-size:11.5px;font-weight:600;
+    flex:none;width:100%;padding:var(--side-pad) 4px;border-radius:var(--r-btn);border:1.5px solid var(--line);
+    background:rgba(24,22,22,var(--cam-alpha));color:var(--text);font-size:var(--side-fs);font-weight:600;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .comp-btn.active{background:var(--accent);border-color:var(--accent);}
+  .comp-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
 
-  .quickbar{position:absolute;left:96px;right:112px;bottom:calc(150px + env(safe-area-inset-bottom));display:flex;gap:7px;z-index:15;}
+  .quickbar{position:absolute;left:calc(var(--side-w) + 16px + var(--sl));right:calc(var(--shutter) + 38px + var(--sr));bottom:calc(var(--dmg-pad) * 4 + var(--dmg-fs) * 2.6 + 40px + var(--sb));display:flex;gap:var(--cam-gap);z-index:15;}
   .qbtn{
-    flex:1;min-width:0;padding:12px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.22);
-    background:rgba(0,0,0,0.55);color:#fff;font-size:13px;font-weight:700;
+    flex:1;min-width:0;padding:12px 8px;border-radius:var(--r-btn);border:1px solid var(--line);
+    background:rgba(24,22,22,var(--cam-alpha));color:var(--text);font-size:13px;font-weight:700;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .qbtn small{color:#8b9298;font-weight:400;margin-right:5px;}
+  .qbtn small{color:var(--muted);font-weight:400;margin-right:5px;}
 
-  .bottom-bar{position:absolute;left:92px;right:8px;bottom:calc(26px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,1fr);gap:6px;z-index:15;}
-  .dmg-btn{padding:12px 4px;border-radius:10px;border:none;font-size:11.5px;font-weight:700;color:#fff;background:rgba(255,255,255,0.12);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .dmg-btn.active{background:var(--accent);}
-  .dmg-btn.other{background:rgba(255,255,255,0.22);}
+  .bottom-bar{position:absolute;left:calc(var(--side-w) + 12px + var(--sl));right:calc(8px + var(--sr));bottom:calc(26px + var(--sb));display:grid;grid-template-columns:repeat(3,1fr);gap:var(--cam-gap);z-index:15;}
+  .dmg-btn{padding:var(--dmg-pad) 4px;border-radius:var(--r-btn);border:1px solid var(--line);font-size:var(--dmg-fs);font-weight:700;color:var(--text);background:rgba(24,22,22,var(--cam-alpha));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dmg-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  .dmg-btn.other{background:rgba(40,39,39,var(--cam-alpha));color:var(--accent);}
 
-  .capture-wrap{position:absolute;right:16px;top:50%;transform:translateY(-50%);z-index:16;}
-  .capture-btn{width:74px;height:74px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;}
+  .capture-wrap{position:absolute;right:calc(16px + var(--sr));top:50%;transform:translateY(-50%);z-index:16;}
+  .capture-btn{width:var(--shutter);height:var(--shutter);border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;}
   .capture-btn:active{transform:scale(0.93);}
-  .capture-btn .dot{width:56px;height:56px;border-radius:50%;background:#fff;border:2px solid #222;}
+  .capture-btn .dot{width:calc(var(--shutter) - 18px);height:calc(var(--shutter) - 18px);border-radius:50%;background:#fff;border:2px solid #222;}
 
   .modal{position:fixed;inset:0;background:#000;z-index:60;display:none;flex-direction:column;}
   .modal.show{display:flex;}
   .modal img{flex:1;width:100%;object-fit:contain;background:#000;min-height:0;}
-  .save-hint{text-align:center;font-size:12px;color:#ffd27a;padding:9px 16px;background:#111;line-height:1.5;}
-  .modal-actions{display:flex;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:#111;}
+  .save-hint:empty{display:none;}
+  .save-hint{text-align:center;font-size:12px;color:var(--accent);padding:9px 16px;background:var(--bg);line-height:1.5;}
+  .modal-actions{display:flex;gap:10px;padding:12px calc(14px + var(--sr)) calc(14px + var(--sb)) calc(14px + var(--sl));background:var(--bg);}
   .modal-actions button{flex:1;padding:16px;border-radius:10px;border:none;font-size:15.5px;font-weight:700;}
-  .btn-retake{background:#2a2d30;color:#fff;}
-  .btn-save{background:var(--accent);color:#fff;}
+  .btn-retake{background:var(--card-2);color:var(--text);}
+  .btn-save{background:var(--accent);color:var(--on-accent);}
 
   .sheet{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:70;display:none;align-items:flex-end;}
   .sheet.show{display:flex;}
-  .sheet-inner{width:100%;max-height:86vh;background:var(--card);border-radius:18px 18px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
+  .sheet-inner{width:100%;padding-left:var(--sl);padding-right:var(--sr);max-height:86vh;background:var(--card);border-radius:18px 18px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
   .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--line);}
   .sheet-head h3{margin:0;font-size:15.5px;font-weight:700;}
   .sheet-head button{background:none;border:none;color:var(--accent);font-size:15px;font-weight:700;}
@@ -177,22 +210,22 @@
 
   /* 위치 입력 */
   .seg{
-    display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:16px 12px;background:#0d0f11;
+    display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:16px 12px;background:var(--field);
     border:1px solid var(--line);border-radius:11px;margin-bottom:12px;
   }
   .seg .txt{font-size:22px;font-weight:800;letter-spacing:.02em;}
   .seg input{
     width:64px;padding:10px 6px;font-size:22px;font-weight:800;text-align:center;
-    border:2px solid var(--accent);border-radius:9px;background:#161a1d;color:#fff;user-select:text;
+    border:2px solid var(--accent);border-radius:9px;background:var(--card);color:var(--text);user-select:text;
   }
-  .seg input:focus{outline:none;background:#1d2428;}
+  .seg input:focus{outline:none;background:var(--card-2);}
   .locprev{font-size:13px;color:var(--muted);margin-bottom:12px;text-align:center;}
-  .locprev b{color:#fff;font-size:17px;}
-  .big-btn{width:100%;padding:16px;border-radius:11px;border:none;background:var(--accent);color:#fff;font-size:16px;font-weight:800;}
+  .locprev b{color:var(--text);font-size:17px;}
+  .big-btn{width:100%;padding:16px;border-radius:11px;border:none;background:var(--accent);color:var(--on-accent);font-size:16px;font-weight:800;}
 
   .toast{
     position:fixed;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));transform:translateX(-50%);
-    background:#242830;color:#fff;padding:11px 18px;border-radius:20px;font-size:13.5px;
+    background:var(--card-2);color:var(--text);border:1px solid var(--line);padding:11px 18px;border-radius:20px;font-size:13.5px;
     opacity:0;pointer-events:none;transition:opacity .25s;z-index:95;max-width:88vw;text-align:center;
   }
   .toast.show{opacity:1;}
@@ -204,6 +237,7 @@
 <div id="home">
   <div class="home-head">
     <div class="ht">
+      <span class="mark">SITE·BOARD</span>
       <h1>현장 보드판</h1>
       <p id="homeSub">시설물을 선택하세요</p>
     </div>
@@ -238,6 +272,9 @@
         </button>
         <button class="nav-row" data-go="cat">
           <span class="nt">시설물 종류 관리</span><span class="nv" id="navCatVal"></span><span class="ar">›</span>
+        </button>
+        <button class="nav-row" id="navUi">
+          <span class="nt">화면 설정 (크기 · 색 · 간격)</span><span class="ar">›</span>
         </button>
       </div>
     </div>
@@ -276,6 +313,18 @@
       <div class="t">초기화</div>
       <div class="chips"><button class="chip warn" id="resetBtn">모든 목록 기본값으로 되돌리기</button></div>
     </div>
+  </div>
+</div>
+
+<!-- ============ 화면 설정 ============ -->
+<div class="screen" id="scrUi">
+  <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>화면 설정</h2></div>
+  <div class="scr-body">
+    <div class="hintline">값을 바꾸면 바로 적용되고 이 기기에 저장됩니다.</div>
+    <div class="sec" style="margin-top:0"><div class="t">촬영 화면</div><div class="card" id="uiCam"></div></div>
+    <div class="sec"><div class="t">설정 화면</div><div class="card" id="uiGen"></div></div>
+    <div class="sec"><div class="t">색상</div><div class="card" id="uiColor"></div></div>
+    <div class="sec"><div class="chips"><button class="chip warn" id="uiReset">화면 설정 기본값으로</button></div></div>
   </div>
 </div>
 
@@ -349,6 +398,7 @@
 <!-- ============ 촬영 ============ -->
 <div id="cam">
   <input type="file" id="fileInput" accept="image/*" capture="environment">
+  <video id="camVideo" playsinline muted autoplay></video>
 
   <div class="cam-top">
     <button class="cam-back" id="camBack">‹</button>
@@ -375,7 +425,7 @@
   <div class="save-hint" id="saveHint"></div>
   <div class="modal-actions">
     <button class="btn-retake" id="retakeBtn">다시 찍기</button>
-    <button class="btn-save" id="saveBtn">저장</button>
+    <button class="btn-save" id="saveBtn">사진 사용</button>
   </div>
 </div>
 
@@ -971,8 +1021,10 @@
     $('home').classList.add('hide');
     $('cam').classList.add('show');
     renderCam();
+    Cam.start();
   });
   $('camBack').addEventListener('click', function(){
+    Cam.stop();
     $('cam').classList.remove('show');
     $('home').classList.remove('hide');
     renderHome();
@@ -1322,17 +1374,102 @@
     ctx.textBaseline = 'alphabetic';
   }
 
+  /* ================= 실시간 카메라 =================
+     아이폰 앱: 앱이 화면 뒤에 카메라를 띄우고, 이 페이지는 배경을 투명하게 한다.
+     웹(안드로이드 등): getUserMedia 영상을 촬영 화면 뒤에 깐다.
+     둘 다 안 되면 예전처럼 기본 카메라 앱을 연다. */
+  var Cam = (function(){
+    var video = $('camVideo'), stream = null, track = null, live = false, pending = null;
+    function post(t){ window.webkit.messageHandlers.board.postMessage({ type:t }); }
+    function setLive(on){
+      live = on;
+      document.documentElement.classList.toggle('live-cam', on && nativeApp);
+      $('cam').classList.toggle('live', on);
+      $('cam').classList.toggle('web', on && !nativeApp);
+    }
+    window.__camState = function(ok){
+      if(!$('cam').classList.contains('show')) return;
+      setLive(!!ok);
+      if(!ok) showToast('카메라를 켜지 못해 기본 카메라로 찍습니다');
+    };
+    window.__camShot = function(url){
+      var cb = pending; pending = null;
+      if(cb) cb(url ? dataUrlToBlob(url) : null);
+    };
+    function dataUrlToBlob(url){
+      var bin = atob(url.slice(url.indexOf(',') + 1)), arr = new Uint8Array(bin.length);
+      for(var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return new Blob([arr], { type:'image/jpeg' });
+    }
+    function start(){
+      if(nativeApp){ post('camStart'); return; }
+      if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return;
+      navigator.mediaDevices.getUserMedia({ audio:false,
+        video:{ facingMode:{ ideal:'environment' }, width:{ ideal:4032 }, height:{ ideal:3024 } } })
+        .then(function(s){
+          if(!$('cam').classList.contains('show')){ s.getTracks().forEach(function(t){ t.stop(); }); return; }
+          stream = s; track = s.getVideoTracks()[0];
+          video.srcObject = s;
+          var p = video.play(); if(p && p.catch) p.catch(function(){});
+          setLive(true);
+        })
+        .catch(function(){ setLive(false); });
+    }
+    function stop(){
+      if(nativeApp) post('camStop');
+      if(stream){ stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; track = null; video.srcObject = null; }
+      setLive(false);
+    }
+    // cb(사진 Blob 또는 실패 시 null)
+    function capture(cb){
+      if(!live) return cb(null);
+      if(nativeApp){ pending = cb; post('camCapture'); return; }
+      function grab(){
+        if(!video.videoWidth) return cb(null);
+        var c = document.createElement('canvas');
+        c.width = video.videoWidth; c.height = video.videoHeight;
+        c.getContext('2d').drawImage(video, 0, 0);
+        c.toBlob(function(b){ cb(b); }, 'image/jpeg', 0.95);
+      }
+      if(window.ImageCapture && track){
+        try{ new ImageCapture(track).takePhoto().then(cb, grab); return; }catch(e){}
+      }
+      grab();
+    }
+    // 웹: 앱 전환 후 돌아오면 다시 켠다
+    document.addEventListener('visibilitychange', function(){
+      if(nativeApp || !$('cam').classList.contains('show')) return;
+      if(document.hidden) stop(); else start();
+    });
+    return { start:start, stop:stop, capture:capture, isLive:function(){ return live; } };
+  })();
+
   /* ================= 촬영 처리 ================= */
   var workCanvas = $('workCanvas'), fileInput = $('fileInput');
 
+  function openSystemCamera(){ fileInput.value = ''; fileInput.click(); }
+
+  // 촬영 버튼: 실시간 카메라가 켜져 있으면 이 화면에서 바로 찍고, 아니면 기본 카메라 앱
+  var shooting = false;
   $('captureBtn').addEventListener('click', function(){
-    fileInput.value = '';
-    fileInput.click();
+    if(shooting) return;
+    if(!Cam.isLive()) return openSystemCamera();
+    shooting = true;
+    $('cam').classList.add('flash');
+    setTimeout(function(){ $('cam').classList.remove('flash'); }, 120);
+    Cam.capture(function(blob){
+      shooting = false;
+      if(!blob){ showToast('촬영 실패'); return; }
+      handlePhoto(blob);
+    });
   });
 
   fileInput.addEventListener('change', function(e){
     var file = e.target.files[0];
-    if(!file) return;
+    if(file) handlePhoto(file);
+  });
+
+  function handlePhoto(file){
     pendingOrig = new File([file], '원본_' + stamp() + '.jpg', {type: file.type || 'image/jpeg'});
     var img = new Image(), reader = new FileReader();
     reader.onload = function(ev){
@@ -1342,7 +1479,7 @@
     };
     reader.onerror = function(){ showToast('파일 읽기 실패'); };
     reader.readAsDataURL(file);
-  });
+  }
 
   function stamp(){
     var d = new Date(), p = function(n){ return String(n).padStart(2,'0'); };
@@ -1361,11 +1498,9 @@
 
     pendingDataUrl = workCanvas.toDataURL('image/jpeg', 0.92);
     $('previewImg').src = pendingDataUrl;
-    $('saveHint').innerHTML = (isAndroid || nativeApp)
-      ? (settings.saveOrig !== false ? '저장을 누르면 <b>각인본 + 원본 2장</b>이 사진첩에 바로 저장됩니다.' : '저장을 누르면 각인본이 사진첩에 바로 저장됩니다.')
-      : settings.saveOrig !== false
-      ? '저장을 누르면 <b>각인본 + 원본 2장</b>이 공유 시트에 올라갑니다. "이미지 저장"을 선택하세요.'
-      : '저장을 누르면 각인본이 공유 시트에 올라갑니다. 사진을 길게 눌러 저장해도 됩니다.';
+    // 아이폰 앱·안드로이드는 [사진 사용]을 누르면 바로 저장되므로 안내 없음
+    $('saveHint').textContent = (isAndroid || nativeApp) ? ''
+      : '[사진 사용]을 누르면 공유 창이 열립니다. "이미지 저장"을 선택하세요.';
     $('previewModal').classList.add('show');
 
     workCanvas.toBlob(function(blob){
@@ -1444,7 +1579,106 @@
     setTimeout(function(){ toast.classList.remove('show'); }, 2400);
   }
 
+  /* ================= 화면 설정 (현장내비 [전체 설정]과 같은 방식) =================
+     [그룹, CSS 변수, 이름, 최소, 최대, 간격, 단위, 기본값] — 이 기기에만 저장 (bd_ui) */
+  var UI_ROWS = [
+    ['cam', 'side-w',      '부재 버튼 폭',     56, 160, 2,    'px', 80],
+    ['cam', 'side-fs',     '부재 글씨',         9,  20, 0.5,  'px', 11.5],
+    ['cam', 'side-pad',    '부재 버튼 높이',    4,  24, 1,    'px', 10],
+    ['cam', 'dmg-fs',      '손상 글씨',         9,  20, 0.5,  'px', 11.5],
+    ['cam', 'dmg-pad',     '손상 버튼 높이',    4,  24, 1,    'px', 12],
+    ['cam', 'shutter',     '촬영 버튼 크기',   50, 110, 2,    'px', 74],
+    ['cam', 'board-scale', '보드판 미리보기',  0.6, 1.8, 0.05, '%',  1],
+    ['cam', 'cam-alpha',   '버튼 배경 진하기',  0, 0.95, 0.05, '%',  0.55],
+    ['cam', 'cam-gap',     '버튼 간격',         2,  16, 1,    'px', 6],
+    ['cam', 'r-btn',       '버튼 둥글기',       0,  24, 1,    'px', 10],
+    ['gen', 'zoom',        '글씨·화면 크기',   0.8, 1.4, 0.05, '%',  1]
+  ];
+  var UI_COLORS = [['accent', '강조색'], ['bg', '배경'], ['card', '카드'], ['text', '글자']];
+  var PALETTE = {   // 현장내비와 같은 팔레트
+    accent: ['#b6927b', '#c4b28a', '#8a9a7b', '#8ba4b0', '#a292a3', '#c4746e', '#b98d7b'],
+    bg:     ['#181616', '#0d0c0c', '#12120f', '#1D1C19'],
+    card:   ['#1D1C19', '#282727', '#181616', '#201e1c'],
+    text:   ['#c5c9c5', '#c8c093', '#a6a69c', '#e0ddd5']
+  };
+  var ui = load('bd_ui', {});
+
+  function mixColor(a, b, t){
+    var p = function(h){ return [1, 3, 5].map(function(i){ return parseInt(h.substr(i, 2), 16); }); };
+    var x = p(a), y = p(b);
+    return '#' + x.map(function(v, i){ return ('0' + Math.round(v * (1 - t) + y[i] * t).toString(16)).slice(-2); }).join('');
+  }
+  function applyUi(){
+    var r = document.documentElement.style;
+    UI_ROWS.forEach(function(row){
+      var v = ui[row[1]];
+      if(v == null) r.removeProperty('--' + row[1]);
+      else r.setProperty('--' + row[1], v + (row[6] === 'px' ? 'px' : ''));
+    });
+    var c = ui.c || {};
+    function setC(k, v){ if(v) r.setProperty(k, v); else r.removeProperty(k); }
+    setC('--accent', c.accent); setC('--bg', c.bg); setC('--card', c.card); setC('--text', c.text);
+    setC('--accent-dim', c.accent ? mixColor(c.accent, c.bg || '#181616', 0.55) : '');
+    setC('--on-accent', c.bg);
+  }
+  function uiFmt(row, v){ return row[6] === 'px' ? v + 'px' : Math.round(v * 100) + '%'; }
+
+  function renderUiScreen(){
+    ['cam', 'gen'].forEach(function(g){
+      var box = $(g === 'cam' ? 'uiCam' : 'uiGen');
+      box.innerHTML = '';
+      UI_ROWS.forEach(function(row){
+        if(row[0] !== g) return;
+        var cur = ui[row[1]] != null ? ui[row[1]] : row[7];
+        var d = document.createElement('div');
+        d.className = 'tn-row';
+        d.innerHTML = '<span class="tn-l"></span><button class="tn-step">−</button>'
+          + '<input type="range"><button class="tn-step">＋</button><span class="tn-v"></span>';
+        d.querySelector('.tn-l').textContent = row[2];
+        var rg = d.querySelector('input'), vv = d.querySelector('.tn-v'), bs = d.querySelectorAll('.tn-step');
+        rg.min = row[3]; rg.max = row[4]; rg.step = row[5]; rg.value = cur;
+        vv.textContent = uiFmt(row, cur);
+        function set(v){
+          v = Math.min(row[4], Math.max(row[3], Math.round(v * 1000) / 1000));
+          ui[row[1]] = v; rg.value = v; vv.textContent = uiFmt(row, v);
+          applyUi(); save('bd_ui', ui);
+        }
+        rg.addEventListener('input', function(){ set(parseFloat(rg.value)); });
+        bs[0].addEventListener('click', function(){ set(parseFloat(rg.value) - row[5]); });
+        bs[1].addEventListener('click', function(){ set(parseFloat(rg.value) + row[5]); });
+        box.appendChild(d);
+      });
+    });
+
+    var cbox = $('uiColor'), c = ui.c || {};
+    cbox.innerHTML = '';
+    UI_COLORS.forEach(function(pair){
+      var k = pair[0], d = document.createElement('div');
+      d.className = 'tn-row';
+      d.innerHTML = '<span class="tn-l"></span><div class="tn-sw"></div>';
+      d.querySelector('.tn-l').textContent = pair[1];
+      var sw = d.querySelector('.tn-sw');
+      [''].concat(PALETTE[k]).forEach(function(col){
+        var b = document.createElement('button');
+        b.className = 'tn-dot' + (col ? '' : ' def') + ((c[k] || '') === col ? ' on' : '');
+        if(col) b.style.background = col; else b.textContent = '기본';
+        b.addEventListener('click', function(){
+          ui.c = ui.c || {}; ui.c[k] = col;
+          save('bd_ui', ui); applyUi(); renderUiScreen();
+        });
+        sw.appendChild(b);
+      });
+      cbox.appendChild(d);
+    });
+  }
+  $('navUi').addEventListener('click', function(){ renderUiScreen(); showScreen('scrUi'); });
+  $('uiReset').addEventListener('click', function(){
+    if(!confirm('화면 설정을 기본값으로 되돌릴까요?')) return;
+    ui = {}; save('bd_ui', ui); applyUi(); renderUiScreen();
+  });
+
   /* ================= init ================= */
+  applyUi();
   renderSetChips();
   renderHome();
   if(settings.gps) startGeo();

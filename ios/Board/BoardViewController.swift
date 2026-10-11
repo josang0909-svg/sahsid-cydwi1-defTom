@@ -2,15 +2,24 @@ import UIKit
 import WebKit
 import Photos
 import CoreLocation
+import AVFoundation
 
 /// GitHub Pages의 보드판 웹페이지를 띄우는 화면.
 /// 실행할 때마다 최신 페이지를 받아 저장해 두고, 인터넷이 없으면 마지막으로 받은 페이지를 연다.
-/// 사진 저장과 GPS는 웹페이지가 아니라 아이폰 기능으로 처리한다.
-final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate, CLLocationManagerDelegate {
+/// 사진 저장·GPS·실시간 카메라는 웹페이지가 아니라 아이폰 기능으로 처리한다.
+/// 카메라 화면은 웹뷰 뒤에 깔고, 촬영 화면에서는 웹페이지 배경이 투명해져 카메라가 비쳐 보인다.
+final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate,
+                                 CLLocationManagerDelegate, AVCapturePhotoCaptureDelegate {
     static let remoteURL = URL(string: "https://josang0909-svg.github.io/sahsid-cydwi1-defTom/index.html")!
 
     private var webView: WKWebView!
     private let location = CLLocationManager()
+
+    private let session = AVCaptureSession()
+    private let photoOutput = AVCapturePhotoOutput()
+    private let camQueue = DispatchQueue(label: "board.camera")
+    private var previewLayer: AVCaptureVideoPreviewLayer?
+    private var camConfigured = false
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
@@ -36,7 +45,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         webView = WKWebView(frame: view.bounds, configuration: config)
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         webView.isOpaque = false
-        webView.backgroundColor = .black
+        webView.backgroundColor = .clear
+        webView.scrollView.backgroundColor = .clear
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.uiDelegate = self
         view.addSubview(webView)
@@ -44,6 +54,20 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBest
         loadPage()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        previewLayer?.frame = view.bounds
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        coordinator.animate(alongsideTransition: nil) { _ in self.updateCameraOrientation() }
+    }
+
+    private func js(_ code: String) {
+        DispatchQueue.main.async { self.webView.evaluateJavaScript(code) }
     }
 
     // MARK: - 페이지 로드
@@ -77,8 +101,75 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             if location.authorizationStatus == .notDetermined { location.requestWhenInUseAuthorization() }
             location.startUpdatingLocation()
         case "geoStop": location.stopUpdatingLocation()
+        case "camStart": startCamera()
+        case "camStop": stopCamera()
+        case "camCapture": capturePhoto()
         default: break
         }
+    }
+
+    // MARK: - 실시간 카메라
+
+    private func startCamera() {
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            guard granted else { return self.js("window.__camState && window.__camState(false)") }
+            self.camQueue.async {
+                if !self.camConfigured { self.configureCamera() }
+                guard self.camConfigured else { return self.js("window.__camState && window.__camState(false)") }
+                if !self.session.isRunning { self.session.startRunning() }
+                DispatchQueue.main.async {
+                    self.previewLayer?.isHidden = false
+                    self.updateCameraOrientation()
+                    self.webView.evaluateJavaScript("window.__camState && window.__camState(true)")
+                }
+            }
+        }
+    }
+
+    private func configureCamera() {
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+              let input = try? AVCaptureDeviceInput(device: device) else { return }
+        session.beginConfiguration()
+        session.sessionPreset = .photo
+        if session.canAddInput(input) { session.addInput(input) }
+        if session.canAddOutput(photoOutput) { session.addOutput(photoOutput) }
+        session.commitConfiguration()
+        camConfigured = true
+        DispatchQueue.main.async {
+            let layer = AVCaptureVideoPreviewLayer(session: self.session)
+            layer.videoGravity = .resizeAspectFill
+            layer.frame = self.view.bounds
+            self.view.layer.insertSublayer(layer, at: 0)
+            self.previewLayer = layer
+        }
+    }
+
+    private func stopCamera() {
+        previewLayer?.isHidden = true
+        camQueue.async { if self.session.isRunning { self.session.stopRunning() } }
+    }
+
+    /// 화면이 왼쪽·오른쪽 가로 중 어느 쪽인지에 맞춰 미리보기와 사진 방향을 돌린다.
+    private func updateCameraOrientation() {
+        let orientation: AVCaptureVideoOrientation =
+            view.window?.windowScene?.interfaceOrientation == .landscapeLeft ? .landscapeLeft : .landscapeRight
+        previewLayer?.connection?.videoOrientation = orientation
+        photoOutput.connection(with: .video)?.videoOrientation = orientation
+    }
+
+    private func capturePhoto() {
+        camQueue.async {
+            guard self.session.isRunning else { return self.js("window.__camShot && window.__camShot(null)") }
+            let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+            self.photoOutput.capturePhoto(with: settings, delegate: self)
+        }
+    }
+
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        guard error == nil, let data = photo.fileDataRepresentation() else {
+            return js("window.__camShot && window.__camShot(null)")
+        }
+        js("window.__camShot && window.__camShot('data:image/jpeg;base64,\(data.base64EncodedString())')")
     }
 
     // MARK: - 사진 저장
