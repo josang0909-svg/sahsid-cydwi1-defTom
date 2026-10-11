@@ -22,9 +22,9 @@
     --sl:env(safe-area-inset-left, 0px); --sr:env(safe-area-inset-right, 0px);
     --st:env(safe-area-inset-top, 0px); --sb:env(safe-area-inset-bottom, 0px);
     /* 화면 설정 값 (기본) */
-    --zoom:1; --side-w:80px; --side-fs:11.5px; --side-pad:10px;
-    --dmg-fs:11.5px; --dmg-pad:12px; --shutter:74px; --cam-alpha:0.55;
-    --r-btn:10px; --cam-gap:6px; --board-scale:1;
+    --zoom:1; --side-w:118px; --dmg-w:150px; --side-fs:13px; --side-pad:11px;
+    --dmg-fs:12.5px; --dmg-pad:10px; --shutter:76px;
+    --r-btn:9px; --cam-gap:6px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
   html,body{
@@ -102,7 +102,7 @@
   .setrow .lab{font-size:13.5px;font-weight:600;flex:none;}
   .setrow .chips{justify-content:flex-end;}
   .setrow .chip{padding:7px 11px;font-size:12.5px;}
-  .setrow input[type=checkbox]{width:22px;height:22px;}
+  .setrow input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);}
 
   .lblrow{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);}
   .lblrow:last-child{border-bottom:none;}
@@ -137,12 +137,59 @@
 
   .hintline{font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:12px;}
 
-  /* ===== 촬영 화면 ===== */
-  #cam{position:fixed;inset:0;background:#000;display:none;z-index:20;}
-  /* 실시간 카메라: 웹은 video, 아이폰 앱은 화면 뒤의 카메라가 비쳐 보이도록 투명 */
-  #camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;display:none;background:#000;}
+  /* ===== 촬영 화면 =====
+     가로 기준 3단: [부재 레일] [4:3 뷰파인더] [위치·손상·촬영 레일]
+     뷰파인더는 실제 사진과 같은 4:3이고, 보드판은 사진에 찍힐 위치·크기 그대로 그려진다.
+     레일은 노치·홈 막대 여백 안쪽에 놓아 잘리지 않는다. */
+  #cam{position:fixed;inset:0;background:var(--bg);display:none;z-index:20;
+    grid-template-columns:var(--side-w) minmax(0,1fr) var(--dmg-w);
+    grid-template-areas:"l f r";
+    padding:var(--st) var(--sr) var(--sb) var(--sl);}
+  #cam.show{display:grid;}
+  html.live-cam, html.live-cam body{background:transparent;}
+  html.live-cam #cam{background:transparent;}
+  .rail{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--bg);padding:10px 8px;gap:var(--cam-gap);}
+  .rail-l{grid-area:l;}
+  .rail-r{grid-area:r;}
+  .rail-t{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:var(--muted);padding:4px 2px 0;}
+  .cam-head{flex:none;display:flex;align-items:center;gap:7px;min-width:0;}
+  .cam-back{width:34px;height:34px;flex:none;border-radius:9px;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:17px;padding:0;}
+  .cam-title{flex:1;min-width:0;line-height:1.3;}
+  .cam-title b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:13px;font-weight:800;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere;}
+  .cam-title span{display:block;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #ovGps{flex:none;font-size:10px;color:var(--accent);line-height:1.35;white-space:pre-line;font-family:"Courier New",monospace;}
+  #ovGps:empty{display:none;}
+  .rail-list{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:var(--cam-gap);padding-bottom:2px;}
+  .rail-list::-webkit-scrollbar{display:none;}
+  .comp-btn,.dmg-btn{flex:none;width:100%;border-radius:var(--r-btn);border:1px solid var(--line);background:var(--card);
+    color:var(--text);font-weight:700;text-align:left;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere;
+    overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;}
+  .comp-btn{padding:var(--side-pad) 10px;font-size:var(--side-fs);}
+  .dmg-btn{padding:var(--dmg-pad) 10px;font-size:var(--dmg-fs);}
+  .comp-btn:active,.dmg-btn:active{background:var(--card-2);}
+  .comp-btn.active,.dmg-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  .dmg-btn.other{background:transparent;border-style:dashed;color:var(--accent);text-align:center;}
+  .loc-btn{flex:none;display:flex;flex-direction:column;gap:1px;width:100%;padding:8px 10px;border-radius:var(--r-btn);
+    border:1px solid var(--accent-dim);background:var(--card);color:var(--text);text-align:left;}
+  .loc-btn small{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.1em;}
+  .loc-btn span{font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .shot-box{flex:none;display:flex;justify-content:center;padding-top:6px;}
+  .capture-btn{width:var(--shutter);height:var(--shutter);border-radius:50%;background:#fff;padding:0;
+    border:5px solid var(--card-2);box-shadow:0 0 0 2px var(--line);display:flex;align-items:center;justify-content:center;}
+  .capture-btn:active{transform:scale(0.93);}
+  .capture-btn .dot{width:calc(var(--shutter) - 20px);height:calc(var(--shutter) - 20px);border-radius:50%;background:#fff;border:2px solid #222;}
+
+  /* 뷰파인더 */
+  .frame-cell{grid-area:f;position:relative;min-width:0;min-height:0;}
+  #camFrame{position:absolute;overflow:hidden;background:#000;border-radius:4px;}
+  html.live-cam #camFrame{background:transparent;}
+  #camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
   #cam.live.web #camVideo{display:block;}
-  html.live-cam, html.live-cam body, html.live-cam #cam{background:transparent;}
+  #camBoard{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;}
+  .frame-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+    color:var(--muted);font-size:12.5px;line-height:1.6;padding:20px;}
+  #cam.live .frame-hint{display:none;}
   /* 3×3 격자 */
   #camGrid{position:absolute;inset:0;z-index:1;pointer-events:none;display:none;
     background:
@@ -151,52 +198,13 @@
       linear-gradient(to bottom, transparent calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px)),
       linear-gradient(to bottom, transparent calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% + 0.5px), transparent calc(66.667% + 0.5px));}
   html.grid-on #camGrid{display:block;}
-  #cam.flash::after{content:'';position:absolute;inset:0;background:#fff;opacity:.55;z-index:50;pointer-events:none;}
-  #cam.show{display:block;}
-  .cam-top{position:absolute;top:calc(10px + var(--st));left:calc(10px + var(--sl));right:calc(10px + var(--sr));display:flex;align-items:center;gap:8px;z-index:20;}
-  .cam-back{width:38px;height:38px;flex:none;border-radius:50%;background:rgba(24,22,22,var(--cam-alpha));border:1px solid var(--line);border:none;color:var(--text);font-size:17px;}
-  .cam-title{flex:1;min-width:0;font-size:13px;line-height:1.35;}
-  .cam-title b{display:block;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .cam-title span{color:var(--muted);font-size:11px;}
-  #ovGps{font-size:10px;color:var(--accent);text-align:right;line-height:1.4;white-space:pre-line;flex:none;}
+  #cam.flash #camFrame::after{content:'';position:absolute;inset:0;background:#fff;opacity:.6;z-index:5;pointer-events:none;}
 
-  .bprev-cam{position:absolute;top:calc(60px + var(--st));left:calc(var(--side-w) + 16px + var(--sl));z-index:18;border-collapse:collapse;font-size:calc(10.5px * var(--board-scale));pointer-events:none;}
-  .bprev-cam td{border:1px solid #000;padding:3px 6px;line-height:1.3;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
-  .bprev-cam .lb{font-weight:700;text-align:center;letter-spacing:.1em;}
-  .bprev-cam.white td{background:#fff;color:#000;}
-  .bprev-cam.trans td{background:rgba(0,0,0,0.45);color:#fff;border-color:rgba(255,255,255,0.8);}
-
-  .sidebar{
-    position:absolute;left:calc(6px + var(--sl));top:calc(56px + var(--st));
-    bottom:calc(24px + var(--sb));width:var(--side-w);
-    display:flex;flex-direction:column;gap:var(--cam-gap);z-index:15;
-    overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 2px 4px;
+  /* 세로로 들었을 때(웹): 뷰파인더 위, 레일 아래 */
+  @media (orientation:portrait){
+    #cam{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,44%);
+      grid-template-areas:"f f" "l r";}
   }
-  .sidebar::-webkit-scrollbar{display:none;}
-  .comp-btn{
-    flex:none;width:100%;padding:var(--side-pad) 4px;border-radius:var(--r-btn);border:1.5px solid var(--line);
-    background:rgba(24,22,22,var(--cam-alpha));color:var(--text);font-size:var(--side-fs);font-weight:600;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .comp-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
-
-  .quickbar{position:absolute;left:calc(var(--side-w) + 16px + var(--sl));right:calc(var(--shutter) + 38px + var(--sr));bottom:calc(var(--dmg-pad) * 4 + var(--dmg-fs) * 2.6 + 40px + var(--sb));display:flex;gap:var(--cam-gap);z-index:15;}
-  .qbtn{
-    flex:1;min-width:0;padding:12px 8px;border-radius:var(--r-btn);border:1px solid var(--line);
-    background:rgba(24,22,22,var(--cam-alpha));color:var(--text);font-size:13px;font-weight:700;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .qbtn small{color:var(--muted);font-weight:400;margin-right:5px;}
-
-  .bottom-bar{position:absolute;left:calc(var(--side-w) + 12px + var(--sl));right:calc(8px + var(--sr));bottom:calc(26px + var(--sb));display:grid;grid-template-columns:repeat(3,1fr);gap:var(--cam-gap);z-index:15;}
-  .dmg-btn{padding:var(--dmg-pad) 4px;border-radius:var(--r-btn);border:1px solid var(--line);font-size:var(--dmg-fs);font-weight:700;color:var(--text);background:rgba(24,22,22,var(--cam-alpha));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .dmg-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
-  .dmg-btn.other{background:rgba(40,39,39,var(--cam-alpha));color:var(--accent);}
-
-  .capture-wrap{position:absolute;right:calc(16px + var(--sr));top:50%;transform:translateY(-50%);z-index:16;}
-  .capture-btn{width:var(--shutter);height:var(--shutter);border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;}
-  .capture-btn:active{transform:scale(0.93);}
-  .capture-btn .dot{width:calc(var(--shutter) - 18px);height:calc(var(--shutter) - 18px);border-radius:50%;background:#fff;border:2px solid #222;}
 
   .modal{position:fixed;inset:0;background:#000;z-index:60;display:none;flex-direction:column;}
   .modal.show{display:flex;}
@@ -237,67 +245,113 @@
     opacity:0;pointer-events:none;transition:opacity .25s;z-index:95;max-width:88vw;text-align:center;
   }
   .toast.show{opacity:1;}
+
+  /* ===== 가로 화면 배치 ===== */
+  .home-wrap{display:flex;flex-direction:column;}
+  .home-main,.home-side{padding:0 calc(16px + var(--sr)) 0 calc(16px + var(--sl));}
+  .home-main{padding-top:calc(18px + var(--st));}
+  .home-side{padding-bottom:calc(30px + var(--sb));}
+  .home-id h1{margin:8px 0 2px;font-size:22px;font-weight:800;letter-spacing:-0.02em;}
+  .home-id p{margin:0;font-size:12.5px;color:var(--muted);}
+  .home-main .shoot-btn{width:100%;justify-content:center;margin-top:18px;padding:17px;font-size:17px;border-radius:12px;}
+  .home-main > *,.home-side > *{zoom:var(--zoom);}
+
+  @media (orientation:landscape) and (min-width:600px){
+    #home{overflow:hidden;}
+    .home-wrap{flex-direction:row;height:100%;}
+    .home-main,.home-side{flex:1 1 0;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+      padding-top:calc(16px + var(--st));padding-bottom:calc(24px + var(--sb));}
+    .home-main{padding-right:20px;display:flex;flex-direction:column;}
+    .home-side{padding-left:20px;border-left:1px solid var(--line);}
+    .home-side > .sec:first-child{margin-top:4px;}
+    .home-main .shoot-btn{margin-top:auto;position:sticky;bottom:0;}
+    .home-main .sec:last-of-type{margin-bottom:18px;}
+
+    .scr-head{padding-top:calc(8px + var(--st));padding-bottom:8px;}
+    .scr-body.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:24px;align-items:start;}
+    .scr-body.two > .full{grid-column:1 / -1;}
+    .scr-body.two > .col > .sec:first-child{margin-top:0;}
+    .scr-body.two .sticky{position:sticky;top:64px;}
+
+    /* 목록·위치 입력 창: 아래에서 올라오는 대신 오른쪽 패널 */
+    .sheet{align-items:stretch;justify-content:flex-end;}
+    .sheet-inner{width:min(460px, 58vw);max-height:none;height:100%;border-radius:16px 0 0 16px;
+      padding-top:var(--st);padding-left:0;border-left:1px solid var(--line);}
+
+    /* 촬영 결과: 사진 크게, 버튼은 오른쪽(촬영 버튼 자리)에 세로로 */
+    .modal{flex-direction:row;padding:var(--st) var(--sr) var(--sb) var(--sl);}
+    .modal img{height:100%;}
+    .modal .save-hint{display:none;}
+    .modal-actions{flex-direction:column;justify-content:flex-end;width:var(--dmg-w);min-width:140px;padding:14px 10px;}
+    .modal-actions button{flex:none;padding:20px 8px;}
+    .modal-actions .btn-save{padding:30px 8px;font-size:17px;}
+  }
+  .scr-body{max-width:960px;margin-left:auto;margin-right:auto;}
 </style>
 </head>
 <body>
 
 <!-- ============ 홈 ============ -->
 <div id="home">
-  <div class="home-head">
-    <div class="ht">
-      <span class="mark">SITE·BOARD</span>
-      <h1>현장 보드판</h1>
-      <p id="homeSub">시설물을 선택하세요</p>
-    </div>
-    <button class="shoot-btn" id="shootBtn">촬영 ▶</button>
-  </div>
-  <div class="scr-body">
+  <div class="home-wrap">
+    <section class="home-main">
+      <div class="home-id">
+        <span class="mark">SITE·BOARD</span>
+        <h1>현장 보드판</h1>
+        <p id="homeSub">시설물을 선택하세요</p>
+      </div>
 
-    <div class="sec">
-      <div class="t">시설물 종류</div>
-      <div class="chips" id="catChips"></div>
-    </div>
+      <div class="sec">
+        <div class="t">시설물 종류</div>
+        <div class="chips" id="catChips"></div>
+      </div>
 
-    <div class="sec">
-      <div class="t">시설물명</div>
-      <div class="card">
-        <div class="frow">
-          <div class="k">시설명</div>
-          <input type="text" id="siteInput" placeholder="예: 가목교">
-          <button class="arrow" id="siteArrow">▼</button>
+      <div class="sec">
+        <div class="t">시설물명</div>
+        <div class="card">
+          <div class="frow">
+            <div class="k">시설명</div>
+            <input type="text" id="siteInput" placeholder="예: 가목교">
+            <button class="arrow" id="siteArrow">▼</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="sec">
-      <div class="t">설정</div>
-      <div class="card">
-        <button class="nav-row" data-go="board">
-          <span class="nt">보드판 설정</span><span class="nv" id="navBoardVal"></span><span class="ar">›</span>
-        </button>
-        <button class="nav-row" data-go="members">
-          <span class="nt">부재별 설정 (손상 · 위치양식)</span><span class="nv" id="navMemberVal"></span><span class="ar">›</span>
-        </button>
-        <button class="nav-row" data-go="cat">
-          <span class="nt">시설물 종류 관리</span><span class="nv" id="navCatVal"></span><span class="ar">›</span>
-        </button>
-        <button class="nav-row" id="navUi">
-          <span class="nt">화면 설정 (크기 · 색 · 간격)</span><span class="ar">›</span>
-        </button>
+      <button class="shoot-btn" id="shootBtn">촬영 시작</button>
+    </section>
+
+    <section class="home-side">
+      <div class="sec">
+        <div class="t">설정</div>
+        <div class="card">
+          <button class="nav-row" data-go="board">
+            <span class="nt">보드판 설정</span><span class="nv" id="navBoardVal"></span><span class="ar">›</span>
+          </button>
+          <button class="nav-row" data-go="members">
+            <span class="nt">부재별 설정 (손상 · 위치양식)</span><span class="nv" id="navMemberVal"></span><span class="ar">›</span>
+          </button>
+          <button class="nav-row" data-go="cat">
+            <span class="nt">시설물 종류 관리</span><span class="nv" id="navCatVal"></span><span class="ar">›</span>
+          </button>
+          <button class="nav-row" id="navUi">
+            <span class="nt">화면 설정 (크기 · 색 · 간격)</span><span class="ar">›</span>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <div class="sec">
-      <div class="t">미리보기</div>
-      <div class="prev-wrap"><table class="bprev white" id="homePrev"></table></div>
-    </div>
+      <div class="sec">
+        <div class="t">미리보기</div>
+        <div class="prev-wrap"><table class="bprev white" id="homePrev"></table></div>
+      </div>
+    </section>
   </div>
 </div>
 
 <!-- ============ 보드판 설정 ============ -->
 <div class="screen" id="scrBoard">
   <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>보드판 설정</h2></div>
-  <div class="scr-body">
+  <div class="scr-body two">
+   <div class="col">
     <div class="card">
       <div class="setrow"><span class="lab">배경</span><div class="chips" id="c_bg"></div></div>
       <div class="setrow"><span class="lab">크기</span><div class="chips" id="c_size"></div></div>
@@ -313,26 +367,32 @@
     </div>
 
     <div class="sec">
-      <div class="t">미리보기</div>
-      <div class="prev-wrap"><table class="bprev white" id="boardPrev"></table></div>
-    </div>
-
-    <div class="sec">
       <div class="t">초기화</div>
       <div class="chips"><button class="chip warn" id="resetBtn">모든 목록 기본값으로 되돌리기</button></div>
     </div>
+   </div>
+   <div class="col sticky">
+    <div class="sec">
+      <div class="t">미리보기</div>
+      <div class="prev-wrap"><table class="bprev white" id="boardPrev"></table></div>
+    </div>
+   </div>
   </div>
 </div>
 
 <!-- ============ 화면 설정 ============ -->
 <div class="screen" id="scrUi">
   <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>화면 설정</h2></div>
-  <div class="scr-body">
-    <div class="hintline">값을 바꾸면 바로 적용되고 이 기기에 저장됩니다.</div>
-    <div class="sec" style="margin-top:0"><div class="t">촬영 화면</div><div class="card" id="uiCam"></div></div>
-    <div class="sec"><div class="t">설정 화면</div><div class="card" id="uiGen"></div></div>
-    <div class="sec"><div class="t">색상</div><div class="card" id="uiColor"></div></div>
-    <div class="sec"><div class="chips"><button class="chip warn" id="uiReset">화면 설정 기본값으로</button></div></div>
+  <div class="scr-body two">
+    <div class="hintline full">값을 바꾸면 바로 적용되고 이 기기에 저장됩니다.</div>
+    <div class="col">
+      <div class="sec"><div class="t">촬영 화면</div><div class="card" id="uiCam"></div></div>
+    </div>
+    <div class="col">
+      <div class="sec"><div class="t">설정 화면</div><div class="card" id="uiGen"></div></div>
+      <div class="sec"><div class="t">색상</div><div class="card" id="uiColor"></div></div>
+      <div class="sec"><div class="chips"><button class="chip warn" id="uiReset">화면 설정 기본값으로</button></div></div>
+    </div>
   </div>
 </div>
 
@@ -352,7 +412,8 @@
 <!-- ============ 부재 상세 ============ -->
 <div class="screen" id="scrDetail">
   <div class="scr-head"><button class="back-btn" data-back>‹</button><h2 id="detTitle">부재</h2></div>
-  <div class="scr-body">
+  <div class="scr-body two">
+   <div class="col">
     <div class="sec" style="margin-top:0">
       <div class="t">부재명</div>
       <div class="card"><div class="lblrow"><input type="text" id="detName"></div></div>
@@ -375,18 +436,20 @@
     </div>
 
     <div class="sec">
+      <div class="chips"><button class="chip warn" id="delMemberBtn">이 부재 삭제</button></div>
+    </div>
+   </div>
+   <div class="col">
+    <div class="sec">
       <div class="t">손상(내용) 목록</div>
-      <div class="hintline">순서대로 촬영 화면 하단 단축키에 표시됩니다.</div>
+      <div class="hintline">순서대로 촬영 화면 오른쪽 손상 목록에 표시됩니다.</div>
       <div class="add-row">
         <input type="text" id="noteNew" placeholder="새 손상 항목 입력">
         <button id="noteAdd">추가</button>
       </div>
       <div class="editor" id="noteBody"></div>
     </div>
-
-    <div class="sec">
-      <div class="chips"><button class="chip warn" id="delMemberBtn">이 부재 삭제</button></div>
-    </div>
+   </div>
   </div>
 </div>
 
@@ -406,26 +469,32 @@
 <!-- ============ 촬영 ============ -->
 <div id="cam">
   <input type="file" id="fileInput" accept="image/*" capture="environment">
-  <video id="camVideo" playsinline muted autoplay></video>
-  <div id="camGrid"></div>
 
-  <div class="cam-top">
-    <button class="cam-back" id="camBack">‹</button>
-    <div class="cam-title"><b id="camSite">-</b><span id="camCat">-</span></div>
+  <aside class="rail rail-l">
+    <div class="cam-head">
+      <button class="cam-back" id="camBack">‹</button>
+      <div class="cam-title"><b id="camSite">-</b><span id="camCat">-</span></div>
+    </div>
     <div id="ovGps"></div>
+    <div class="rail-t">부재</div>
+    <div class="rail-list" id="sidebar"></div>
+  </aside>
+
+  <div class="frame-cell" id="frameCell">
+    <div id="camFrame">
+      <video id="camVideo" playsinline muted autoplay></video>
+      <div id="camGrid"></div>
+      <canvas id="camBoard"></canvas>
+      <div class="frame-hint" id="frameHint">카메라를 켜는 중입니다<br>촬영 버튼을 누르면 기본 카메라로 찍을 수 있습니다</div>
+    </div>
   </div>
 
-  <table class="bprev-cam white" id="camPrev"></table>
-
-  <div class="sidebar" id="sidebar"></div>
-
-  <div class="quickbar">
-    <button class="qbtn" id="qLoc"><small>위치</small><span>-</span></button>
-  </div>
-
-  <div class="bottom-bar" id="bottomBar"></div>
-
-  <div class="capture-wrap"><button class="capture-btn" id="captureBtn"><span class="dot"></span></button></div>
+  <aside class="rail rail-r">
+    <button class="loc-btn" id="qLoc"><small>위치</small><span>-</span></button>
+    <div class="rail-t">손상</div>
+    <div class="rail-list" id="bottomBar"></div>
+    <div class="shot-box"><button class="capture-btn" id="captureBtn"><span class="dot"></span></button></div>
+  </aside>
 </div>
 
 <!-- ============ 촬영 결과 ============ -->
@@ -1059,7 +1128,7 @@
     var box = $('bottomBar');
     box.innerHTML = '';
     var h = noteHolder();
-    h.arr.slice(0,5).forEach(function(n){
+    h.arr.forEach(function(n){
       var b = document.createElement('button');
       b.className = 'dmg-btn' + (values.note === n ? ' active' : '');
       b.textContent = n;
@@ -1068,7 +1137,7 @@
     });
     var more = document.createElement('button');
     more.className = 'dmg-btn other';
-    more.textContent = '＋ 목록';
+    more.textContent = '＋ 목록 편집';
     more.addEventListener('click', openNoteSheet);
     box.appendChild(more);
   }
@@ -1079,14 +1148,46 @@
     if(geo.lat == null){ el.textContent = 'GPS 탐색중'; return; }
     el.textContent = 'N' + geo.lat.toFixed(4) + '°\nE' + geo.lon.toFixed(4) + '°' +
       (geo.alt != null ? '\n' + Math.round(geo.alt) + 'm' : '');
+    drawCamBoard();
   }
 
   function renderCam(){
     $('camSite').textContent = values.site || '시설명 미입력';
     $('camCat').textContent = values.cat || '';
     $('qLoc').querySelector('span').textContent = values.loc || '-';
-    renderSidebar(); renderBottom(); fillPrev($('camPrev')); renderGps();
+    renderSidebar(); renderBottom(); renderGps();
+    layoutFrame();
   }
+
+  /* 뷰파인더: 가운데 칸에 들어가는 가장 큰 4:3 사각형. 아이폰 앱에는 이 위치를 알려 카메라를 그 자리에 띄운다 */
+  var frameRect = null;
+  function layoutFrame(){
+    if(!$('cam').classList.contains('show')) return;
+    var cell = $('frameCell').getBoundingClientRect(), pad = 6;
+    var cw = cell.width - pad*2, ch = cell.height - pad*2;
+    if(cw <= 0 || ch <= 0) return;
+    var fw = Math.min(cw, ch * 4/3), fh = fw * 3/4;
+    var x = Math.round(pad + (cw - fw)/2), y = Math.round(pad + (ch - fh)/2);
+    fw = Math.round(fw); fh = Math.round(fh);
+    var f = $('camFrame');
+    f.style.left = x + 'px'; f.style.top = y + 'px'; f.style.width = fw + 'px'; f.style.height = fh + 'px';
+    frameRect = { x: Math.round(cell.left) + x, y: Math.round(cell.top) + y, w: fw, h: fh };
+    if(nativeApp) window.webkit.messageHandlers.board.postMessage({ type:'camRect', x:frameRect.x, y:frameRect.y, w:fw, h:fh });
+    drawCamBoard();
+  }
+  // 보드판을 실제 사진과 같은 비율·위치로 뷰파인더 위에 그린다
+  function drawCamBoard(){
+    var cv = $('camBoard');
+    if(!frameRect || !$('cam').classList.contains('show')) return;
+    var dpr = window.devicePixelRatio || 1;
+    var W = Math.round(frameRect.w * dpr), H = Math.round(frameRect.h * dpr);
+    if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+    var ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+    drawBoard(ctx, W, H);
+  }
+  window.addEventListener('resize', function(){ setTimeout(layoutFrame, 60); });
+  window.addEventListener('orientationchange', function(){ setTimeout(layoutFrame, 300); });
 
   function refreshAll(){
     if($('cam').classList.contains('show')) renderCam();
@@ -1400,6 +1501,7 @@
       clearTimeout(waitTimer);
       if(!$('cam').classList.contains('show')) return;
       setLive(!!ok);
+      layoutFrame();
       if(!ok) showToast('카메라를 켜지 못해 기본 카메라로 찍습니다');
     };
     window.__camShot = function(url){
@@ -1605,17 +1707,16 @@
   /* ================= 화면 설정 (현장내비 [전체 설정]과 같은 방식) =================
      [그룹, CSS 변수, 이름, 최소, 최대, 간격, 단위, 기본값] — 이 기기에만 저장 (bd_ui) */
   var UI_ROWS = [
-    ['cam', 'side-w',      '부재 버튼 폭',     56, 160, 2,    'px', 80],
-    ['cam', 'side-fs',     '부재 글씨',         9,  20, 0.5,  'px', 11.5],
-    ['cam', 'side-pad',    '부재 버튼 높이',    4,  24, 1,    'px', 10],
-    ['cam', 'dmg-fs',      '손상 글씨',         9,  20, 0.5,  'px', 11.5],
-    ['cam', 'dmg-pad',     '손상 버튼 높이',    4,  24, 1,    'px', 12],
-    ['cam', 'shutter',     '촬영 버튼 크기',   50, 110, 2,    'px', 74],
-    ['cam', 'board-scale', '보드판 미리보기',  0.6, 1.8, 0.05, '%',  1],
-    ['cam', 'cam-alpha',   '버튼 배경 진하기',  0, 0.95, 0.05, '%',  0.55],
-    ['cam', 'cam-gap',     '버튼 간격',         2,  16, 1,    'px', 6],
-    ['cam', 'r-btn',       '버튼 둥글기',       0,  24, 1,    'px', 10],
-    ['gen', 'zoom',        '글씨·화면 크기',   0.8, 1.4, 0.05, '%',  1]
+    ['cam', 'side-w',   '부재 칸 폭',       90, 200, 2,   'px', 118],
+    ['cam', 'side-fs',  '부재 글씨',         10,  20, 0.5, 'px', 13],
+    ['cam', 'side-pad', '부재 버튼 높이',     4,  22, 1,   'px', 11],
+    ['cam', 'dmg-w',    '손상 칸 폭',       110, 220, 2,   'px', 150],
+    ['cam', 'dmg-fs',   '손상 글씨',         10,  20, 0.5, 'px', 12.5],
+    ['cam', 'dmg-pad',  '손상 버튼 높이',     4,  22, 1,   'px', 10],
+    ['cam', 'shutter',  '촬영 버튼 크기',    56, 100, 2,   'px', 76],
+    ['cam', 'cam-gap',  '버튼 간격',          2,  14, 1,   'px', 6],
+    ['cam', 'r-btn',    '버튼 둥글기',        0,  20, 1,   'px', 9],
+    ['gen', 'zoom',     '글씨·화면 크기',   0.8, 1.4, 0.05, '%', 1]
   ];
   var UI_COLORS = [['accent', '강조색'], ['bg', '배경'], ['card', '카드'], ['text', '글자']];
   var PALETTE = {   // 현장내비와 같은 팔레트
@@ -1644,6 +1745,7 @@
     setC('--accent-dim', c.accent ? mixColor(c.accent, c.bg || '#181616', 0.55) : '');
     setC('--on-accent', c.bg);
     document.documentElement.classList.toggle('grid-on', ui.grid !== false);
+    if(typeof layoutFrame === 'function') layoutFrame();
   }
   function uiFmt(row, v){ return row[6] === 'px' ? v + 'px' : Math.round(v * 100) + '%'; }
 

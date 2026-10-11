@@ -20,6 +20,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     private let camQueue = DispatchQueue(label: "board.camera")
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var camConfigured = false
+    /// 웹페이지가 알려 준 뷰파인더(4:3) 위치. 카메라 미리보기를 이 자리에만 띄운다.
+    private var camRect: CGRect?
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
@@ -62,7 +64,14 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        previewLayer?.frame = view.bounds
+        applyPreviewFrame()
+    }
+
+    private func applyPreviewFrame() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        previewLayer?.frame = camRect ?? view.bounds
+        CATransaction.commit()
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -108,6 +117,12 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         case "camStart": startCamera()
         case "camStop": stopCamera()
         case "camCapture": capturePhoto()
+        case "camRect":
+            if let x = body["x"] as? Double, let y = body["y"] as? Double,
+               let w = body["w"] as? Double, let h = body["h"] as? Double, w > 0, h > 0 {
+                camRect = CGRect(x: x, y: y, width: w, height: h)
+                applyPreviewFrame()
+            }
         default: break
         }
     }
@@ -142,9 +157,9 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         DispatchQueue.main.async {
             let layer = AVCaptureVideoPreviewLayer(session: self.session)
             layer.videoGravity = .resizeAspectFill
-            layer.frame = self.view.bounds
             self.view.layer.insertSublayer(layer, at: 0)
             self.previewLayer = layer
+            self.applyPreviewFrame()
         }
     }
 
