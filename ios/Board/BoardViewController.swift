@@ -38,6 +38,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         let content = WKUserContentController()
         content.add(self, name: "board")
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true };",
+                                           injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
         config.allowsInlineMediaPlayback = true

@@ -143,6 +143,14 @@
   #camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;display:none;background:#000;}
   #cam.live.web #camVideo{display:block;}
   html.live-cam, html.live-cam body, html.live-cam #cam{background:transparent;}
+  /* 3×3 격자 */
+  #camGrid{position:absolute;inset:0;z-index:1;pointer-events:none;display:none;
+    background:
+      linear-gradient(to right, transparent calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px)),
+      linear-gradient(to right, transparent calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% + 0.5px), transparent calc(66.667% + 0.5px)),
+      linear-gradient(to bottom, transparent calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px)),
+      linear-gradient(to bottom, transparent calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% + 0.5px), transparent calc(66.667% + 0.5px));}
+  html.grid-on #camGrid{display:block;}
   #cam.flash::after{content:'';position:absolute;inset:0;background:#fff;opacity:.55;z-index:50;pointer-events:none;}
   #cam.show{display:block;}
   .cam-top{position:absolute;top:calc(10px + var(--st));left:calc(10px + var(--sl));right:calc(10px + var(--sr));display:flex;align-items:center;gap:8px;z-index:20;}
@@ -399,6 +407,7 @@
 <div id="cam">
   <input type="file" id="fileInput" accept="image/*" capture="environment">
   <video id="camVideo" playsinline muted autoplay></video>
+  <div id="camGrid"></div>
 
   <div class="cam-top">
     <button class="cam-back" id="camBack">‹</button>
@@ -1388,6 +1397,7 @@
       $('cam').classList.toggle('web', on && !nativeApp);
     }
     window.__camState = function(ok){
+      clearTimeout(waitTimer);
       if(!$('cam').classList.contains('show')) return;
       setLive(!!ok);
       if(!ok) showToast('카메라를 켜지 못해 기본 카메라로 찍습니다');
@@ -1401,8 +1411,21 @@
       for(var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
       return new Blob([arr], { type:'image/jpeg' });
     }
+    var waitTimer = null;
     function start(){
-      if(nativeApp){ post('camStart'); return; }
+      if(nativeApp){
+        // 1.0.6 이전 앱은 화면 카메라 기능이 없다
+        if(!(window.__boardApp && window.__boardApp.camera)){
+          showToast('SideStore에서 앱을 업데이트하면 카메라가 화면에 바로 보입니다');
+          return;
+        }
+        post('camStart');
+        clearTimeout(waitTimer);
+        waitTimer = setTimeout(function(){
+          if(!live && $('cam').classList.contains('show')) showToast('카메라를 켜지 못했습니다. 설정 > FieldBoard > 카메라를 확인해 주세요');
+        }, 5000);
+        return;
+      }
       if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return;
       navigator.mediaDevices.getUserMedia({ audio:false,
         video:{ facingMode:{ ideal:'environment' }, width:{ ideal:4032 }, height:{ ideal:3024 } } })
@@ -1620,6 +1643,7 @@
     setC('--accent', c.accent); setC('--bg', c.bg); setC('--card', c.card); setC('--text', c.text);
     setC('--accent-dim', c.accent ? mixColor(c.accent, c.bg || '#181616', 0.55) : '');
     setC('--on-accent', c.bg);
+    document.documentElement.classList.toggle('grid-on', ui.grid !== false);
   }
   function uiFmt(row, v){ return row[6] === 'px' ? v + 'px' : Math.round(v * 100) + '%'; }
 
@@ -1627,6 +1651,15 @@
     ['cam', 'gen'].forEach(function(g){
       var box = $(g === 'cam' ? 'uiCam' : 'uiGen');
       box.innerHTML = '';
+      if(g === 'cam'){
+        var gr = document.createElement('div');
+        gr.className = 'setrow';
+        gr.innerHTML = '<span class="lab">격자 표시</span><input type="checkbox" id="uiGrid">';
+        var cb = gr.querySelector('input');
+        cb.checked = ui.grid !== false;
+        cb.addEventListener('change', function(){ ui.grid = cb.checked; save('bd_ui', ui); applyUi(); });
+        box.appendChild(gr);
+      }
       UI_ROWS.forEach(function(row){
         if(row[0] !== g) return;
         var cur = ui[row[1]] != null ? ui[row[1]] : row[7];
