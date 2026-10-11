@@ -9,16 +9,16 @@
       "developerName": "josang0909",
       "localizedDescription": "현장 보드판: 현장 사진 보드판 (개인용)",
       "iconURL": "https://raw.githubusercontent.com/josang0909-svg/sahsid-cydwi1-defTom/main/icon-512.png",
-      "version": "1.0.6",
-      "versionDate": "2026-10-11T16:04:44Z",
-      "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.6/Board.ipa",
-      "size": 131999,
+      "version": "1.0.9",
+      "versionDate": "2026-10-11T17:09:32Z",
+      "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.9/Board.ipa",
+      "size": 135807,
       "versions": [
         {
-          "version": "1.0.6",
-          "date": "2026-10-11T16:04:44Z",
-          "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.6/Board.ipa",
-          "size": 131999,
+          "version": "1.0.9",
+          "date": "2026-10-11T17:09:32Z",
+          "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.9/Board.ipa",
+          "size": 135807,
           "minOSVersion": "15.0"
         }
       ]
