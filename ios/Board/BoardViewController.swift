@@ -20,6 +20,12 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     private let camQueue = DispatchQueue(label: "board.camera")
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var camConfigured = false
+    private var camDevice: AVCaptureDevice?
+    /// 화면에 보이는 1× 에 해당하는 실제 zoomFactor. 초광각이 있는 카메라는 zoomFactor 1이 0.5× 라서 2 정도가 된다.
+    private var zoomBase: CGFloat = 1
+    /// 웹페이지 배율 버튼에 보일 배율 (.5, 1, 2, 3 …)
+    private var zoomPresets: [Double] = [1, 2]
+    private let zoomMaxDisplay: CGFloat = 10
     /// 웹페이지가 알려 준 뷰파인더(4:3) 위치. 카메라 미리보기를 이 자리에만 띄운다.
     private var camRect: CGRect?
 
@@ -42,7 +48,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true };",
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, zoom: true };",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
@@ -117,6 +123,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         case "camStart": startCamera()
         case "camStop": stopCamera()
         case "camCapture": capturePhoto()
+        case "camZoom":
+            if let z = body["z"] as? Double { setZoom(z) }
         case "camRect":
             if let x = body["x"] as? Double, let y = body["y"] as? Double,
                let w = body["w"] as? Double, let h = body["h"] as? Double, w > 0, h > 0 {
@@ -136,18 +144,38 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 if !self.camConfigured { self.configureCamera() }
                 guard self.camConfigured else { return self.js("window.__camState && window.__camState(false)") }
                 if !self.session.isRunning { self.session.startRunning() }
+                // 켤 때마다 기본 카메라처럼 1× 로 시작
+                self.applyZoom(self.zoomBase)
+                let minD = Double((self.camDevice?.minAvailableVideoZoomFactor ?? 1) / self.zoomBase)
+                let maxD = Double(self.maxZoomFactor / self.zoomBase)
+                let presets = self.zoomPresets.map { String($0) }.joined(separator: ",")
                 DispatchQueue.main.async {
                     self.previewLayer?.isHidden = false
                     self.updateCameraOrientation()
                     self.webView.evaluateJavaScript("window.__camState && window.__camState(true)")
+                    self.webView.evaluateJavaScript("window.__camZoom && window.__camZoom(\(minD), \(maxD), 1, [\(presets)])")
                 }
             }
         }
     }
 
     private func configureCamera() {
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+        // 렌즈가 여러 개인 폰은 기본 카메라처럼 배율에 따라 초광각·광각·망원을 알아서 바꿔 쓰는 가상 카메라를 쓴다
+        let types: [AVCaptureDevice.DeviceType] = [.builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera, .builtInWideAngleCamera]
+        let found = AVCaptureDevice.DiscoverySession(deviceTypes: types, mediaType: .video, position: .back).devices
+        guard let device = types.lazy.compactMap({ t in found.first { $0.deviceType == t } }).first
+                ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: device) else { return }
+        camDevice = device
+        let switchOver = device.virtualDeviceSwitchOverVideoZoomFactors.map { CGFloat($0.doubleValue) }
+        let hasUltraWide = device.constituentDevices.contains { $0.deviceType == .builtInUltraWideCamera }
+        zoomBase = hasUltraWide ? (switchOver.first ?? 2) : 1
+        var presets: [Double] = []
+        if hasUltraWide { presets.append(Double(device.minAvailableVideoZoomFactor / zoomBase)) }
+        presets.append(1)
+        for f in switchOver where f > zoomBase + 0.01 { presets.append(Double((f / zoomBase * 10).rounded() / 10)) }
+        if presets.last ?? 1 <= 1 { presets.append(2) }
+        zoomPresets = presets
         session.beginConfiguration()
         session.sessionPreset = .photo
         if session.canAddInput(input) { session.addInput(input) }
@@ -161,6 +189,22 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             self.previewLayer = layer
             self.applyPreviewFrame()
         }
+    }
+
+    private var maxZoomFactor: CGFloat {
+        guard let d = camDevice else { return 1 }
+        return min(d.maxAvailableVideoZoomFactor, zoomBase * zoomMaxDisplay)
+    }
+
+    /// 웹페이지 배율(1 = 1×)을 받아 카메라 zoomFactor로 바꾼다
+    private func setZoom(_ display: Double) {
+        camQueue.async { self.applyZoom(CGFloat(display) * self.zoomBase) }
+    }
+
+    private func applyZoom(_ factor: CGFloat) {
+        guard let d = camDevice, (try? d.lockForConfiguration()) != nil else { return }
+        d.videoZoomFactor = max(d.minAvailableVideoZoomFactor, min(maxZoomFactor, factor))
+        d.unlockForConfiguration()
     }
 
     private func stopCamera() {

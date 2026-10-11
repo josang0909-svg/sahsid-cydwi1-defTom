@@ -198,6 +198,19 @@
       linear-gradient(to bottom, transparent calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px)),
       linear-gradient(to bottom, transparent calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% + 0.5px), transparent calc(66.667% + 0.5px));}
   html.grid-on #camGrid{display:block;}
+  /* 줌: 오른쪽 가장자리 배율 버튼 + 위아래로 끌면 나오는 눈금 다이얼 (기본 카메라처럼) */
+  #camFrame{touch-action:none;}
+  #camVideo{transform-origin:50% 50%;}
+  .zoom-ctl{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:4;display:none;
+    flex-direction:column-reverse;align-items:center;gap:6px;padding:6px 4px;border-radius:24px;
+    background:rgba(0,0,0,0.38);touch-action:none;user-select:none;-webkit-user-select:none;}
+  #cam.live .zoom-ctl.on{display:flex;}
+  .zoom-ctl button{width:36px;height:36px;border-radius:50%;border:none;padding:0;background:rgba(0,0,0,0.45);
+    color:#fff;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
+  .zoom-ctl button.on{width:40px;height:40px;color:#f2c94c;font-size:12.5px;background:rgba(0,0,0,0.6);}
+  #zoomRuler{position:absolute;right:58px;top:50%;transform:translateY(-50%);z-index:4;pointer-events:none;
+    opacity:0;transition:opacity .25s;}
+  #zoomRuler.show{opacity:1;transition:none;}
   #cam.flash #camFrame::after{content:'';position:absolute;inset:0;background:#fff;opacity:.6;z-index:5;pointer-events:none;}
 
   /* 세로로 들었을 때(웹): 뷰파인더 위, 레일 아래 */
@@ -485,6 +498,8 @@
       <video id="camVideo" playsinline muted autoplay></video>
       <div id="camGrid"></div>
       <canvas id="camBoard"></canvas>
+      <canvas id="zoomRuler" width="0" height="0"></canvas>
+      <div class="zoom-ctl" id="zoomCtl"></div>
       <div class="frame-hint" id="frameHint">카메라를 켜는 중입니다<br>촬영 버튼을 누르면 기본 카메라로 찍을 수 있습니다</div>
     </div>
   </div>
@@ -547,6 +562,7 @@
         sites:['삼승터널(상)','삼승터널(하)'],
         common:['상태양호','균열(Cw=0.3mm미만)','균열(Cw=0.3mm)','누수','백태','박리','박락','파손'],
         members:[
+          T('전경',['상태양호','균열(Cw=0.3mm미만)','균열(Cw=0.3mm)','누수','백태','박리','박락','파손'],['Sp.?']),
           T('라이닝',['상태양호','균열(Cw=0.3mm미만)','균열(Cw=0.3mm)','누수','백태','박리','박락','보수부 재균열','콜드조인트','철근노출'],['Sp.?']),
           T('공동구(L)',['상태양호','균열(Cw=0.3mm미만)','누수','백태','파손','노견토사퇴적','배수구 막힘'],['Sp.?']),
           T('공동구(R)',['상태양호','균열(Cw=0.3mm미만)','누수','백태','파손','노견토사퇴적','배수구 막힘'],['Sp.?']),
@@ -562,6 +578,7 @@
         sites:[],
         common:['상태양호','균열(Cw=0.3mm미만)','균열(Cw=0.3mm)','누수','백태','박리','박락','부식','파손'],
         members:[
+          T('전경',['상태양호','균열(Cw=0.3mm미만)','균열(Cw=0.3mm)','누수','백태','박리','박락','부식','파손'],['A?','P?','A?Sh?','P?Sh?','S?','S?G?']),
           T('바닥판',['상태양호','균열(Cw=0.3mm미만)','균열(Cw=0.3mm)','망상균열','박리','박락','누수','백태','철근노출','보수부 재균열','보수 상태양호(균열)'],['S?']),
           T('교면포장',['상태양호','Asp 망상균열','종방향 균열','횡방향 균열','포트홀','소성변형','LMC 파손','LMC 균열'],['S?']),
           T('거더',['상태양호','균열(Cw=0.3mm미만)','균열(Cw=0.3mm)','박리','박락','누수','처짐','강재부식','도장박리'],['S?-G?']),
@@ -587,6 +604,7 @@
   var settings = load('bd_settings', SET_DEFAULT);
   if(!settings.labels || settings.labels.length !== 5) settings.labels = SET_DEFAULT.labels.slice();
   var tree = normalize(loadTree());
+  addOverviewMember();
   var values = load('bd_values', { cat:'', site:'', member:'', loc:'', note:'' });
   if(!values.cat && tree.cats.length) values.cat = tree.cats[0].name;
 
@@ -624,6 +642,21 @@
       });
     });
     return t;
+  }
+  // 이미 쓰던 목록에도 부재 맨 앞에 '전경'을 한 번만 넣는다 (지운 뒤에는 다시 넣지 않음)
+  function addOverviewMember(){
+    if(tree.overviewAdded) return;
+    var defs = DEFAULT_TREE().cats;
+    tree.cats.forEach(function(c){
+      if(c.members.some(function(m){ return m.name === '전경'; })) return;
+      var d = defs.filter(function(x){ return x.name === c.name; })[0];
+      var m = d ? JSON.parse(JSON.stringify(d.members[0])) : { name:'전경', notes:c.common.slice(), forms:[], locMode:'free' };
+      if(!d) m.notes = c.common.slice();
+      m.recent = [];
+      c.members.unshift(m);
+    });
+    tree.overviewAdded = true;
+    saveTree();
   }
   function saveTree(){ try{ localStorage.setItem('bd_tree', JSON.stringify(tree)); }catch(e){} }
   function saveSettings(){ save('bd_settings', settings); }
@@ -1488,6 +1521,132 @@
      아이폰 앱: 앱이 화면 뒤에 카메라를 띄우고, 이 페이지는 배경을 투명하게 한다.
      웹(안드로이드 등): getUserMedia 영상을 촬영 화면 뒤에 깐다.
      둘 다 안 되면 예전처럼 기본 카메라 앱을 연다. */
+  /* ================= 줌 =================
+     오른쪽 배율 버튼(.5 1 2 …)을 누르면 그 배율로, 위아래로 끌면 눈금 다이얼로 세밀하게,
+     화면을 두 손가락으로 벌리거나 오므려도 된다.
+     아이폰 앱: 앱 카메라의 zoomFactor (초광각이 있으면 0.5×까지)
+     웹: 카메라가 줌을 지원하면 그 기능, 아니면 화면을 확대해 가운데를 잘라 찍는다. */
+  var Zoom = (function(){
+    var ctl = $('zoomCtl'), ruler = $('zoomRuler');
+    var z = 1, min = 1, max = 1, presets = [], apply = null, raf = 0, hideT = 0, PX = 110; // 끌기 110px = 2배
+    function clamp(v){ return Math.max(min, Math.min(max, v)); }
+    function label(v, active){
+      var t = v < 1 ? v.toFixed(1).replace(/^0/, '') : (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1));
+      return active ? t + '×' : t;
+    }
+    function render(){
+      var act = 0;
+      presets.forEach(function(p, i){ if(z >= p - 0.02) act = i; });
+      var bs = ctl.children;
+      for(var i = 0; i < bs.length; i++){
+        bs[i].classList.toggle('on', i === act);
+        bs[i].textContent = label(i === act ? z : presets[i], i === act);
+      }
+      if(ruler.classList.contains('show')) drawRuler();
+    }
+    function drawRuler(){
+      var dpr = window.devicePixelRatio || 1, w = 46, h = Math.min(260, Math.max(120, ($('camFrame').clientHeight || 300) - 40));
+      if(ruler.width !== w * dpr || ruler.height !== h * dpr){
+        ruler.width = w * dpr; ruler.height = h * dpr; ruler.style.width = w + 'px'; ruler.style.height = h + 'px';
+      }
+      var c = ruler.getContext('2d'), mid = h / 2, lz = Math.log(z) / Math.LN2;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      c.clearRect(0, 0, w, h);
+      c.fillStyle = 'rgba(0,0,0,0.45)';
+      c.beginPath(); c.moveTo(14, 0); c.arcTo(w, 0, w, h, 14); c.arcTo(w, h, 0, h, 14); c.arcTo(0, h, 0, 0, 14); c.arcTo(0, 0, w, 0, 14); c.fill();
+      c.font = '600 10px -apple-system,sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
+      for(var v = Math.ceil(min * 10) / 10; v <= max + 1e-6; v += (v < 2 ? 0.1 : v < 10 ? 0.5 : 1)){
+        v = Math.round(v * 10) / 10;
+        var y = mid - (Math.log(v) / Math.LN2 - lz) * PX;
+        if(y < 6 || y > h - 6) continue;
+        var major = presets.some(function(p){ return Math.abs(p - v) < 0.01; }) || v === 5 || v === 10;
+        c.fillStyle = major ? '#fff' : 'rgba(255,255,255,0.5)';
+        c.fillRect(w - (major ? 16 : 9), y - 0.5, major ? 12 : 6, 1);
+        if(major){ c.fillText(label(v), w - 19, y); }
+      }
+      c.fillStyle = '#f2c94c';
+      c.fillRect(w - 22, mid - 1, 20, 2);
+      c.globalAlpha = 1;
+    }
+    function showRuler(){
+      clearTimeout(hideT);
+      ruler.classList.add('show');
+      drawRuler();
+    }
+    function hideRulerSoon(){
+      clearTimeout(hideT);
+      hideT = setTimeout(function(){ ruler.classList.remove('show'); }, 1200);
+    }
+    function set(v){
+      z = clamp(v);
+      render();
+      if(!raf) raf = requestAnimationFrame(function(){ raf = 0; if(apply) apply(z); });
+    }
+    function setup(o, fn){
+      min = o.min; max = o.max; presets = o.presets.filter(function(p){ return p >= min - 0.01 && p <= max + 0.01; });
+      if(!presets.length) presets = [min];
+      apply = fn;
+      ctl.innerHTML = '';
+      presets.forEach(function(p){ var b = document.createElement('button'); b.type = 'button'; b.dataset.z = p; ctl.appendChild(b); });
+      ctl.classList.toggle('on', max > min);
+      set(o.cur || 1);
+    }
+    function reset(){
+      ctl.classList.remove('on'); ruler.classList.remove('show');
+      apply = null; z = 1; min = max = 1; presets = [];
+    }
+
+    // 배율 버튼: 누르면 그 배율, 위아래로 끌면 다이얼
+    var drag = null;
+    ctl.addEventListener('pointerdown', function(e){
+      if(!apply) return;
+      drag = { y: e.clientY, z: z, moved: false, btn: e.target.closest('button') };
+      try{ ctl.setPointerCapture(e.pointerId); }catch(_){}
+      e.preventDefault();
+    });
+    ctl.addEventListener('pointermove', function(e){
+      if(!drag) return;
+      var dy = drag.y - e.clientY;
+      if(!drag.moved && Math.abs(dy) < 6) return;
+      drag.moved = true;
+      showRuler();
+      set(drag.z * Math.pow(2, dy / PX));
+    });
+    function end(){
+      if(!drag) return;
+      if(!drag.moved && drag.btn){
+        var p = parseFloat(drag.btn.dataset.z);
+        // 이미 그 버튼 구간이면 정확히 그 배율로 되돌린다
+        set(p);
+        showRuler();
+      }
+      drag = null;
+      hideRulerSoon();
+    }
+    ctl.addEventListener('pointerup', end);
+    ctl.addEventListener('pointercancel', end);
+
+    // 두 손가락 벌리기/오므리기
+    var pinch = null, frame = $('camFrame');
+    function dist(t){ var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.sqrt(dx*dx + dy*dy) || 1; }
+    frame.addEventListener('touchstart', function(e){
+      if(apply && e.touches.length === 2){ pinch = { d: dist(e.touches), z: z }; showRuler(); e.preventDefault(); }
+    }, { passive:false });
+    frame.addEventListener('touchmove', function(e){
+      if(pinch && e.touches.length === 2){ set(pinch.z * dist(e.touches) / pinch.d); e.preventDefault(); }
+    }, { passive:false });
+    frame.addEventListener('touchend', function(e){
+      if(pinch && e.touches.length < 2){ pinch = null; hideRulerSoon(); }
+    });
+
+    window.__camZoom = function(mn, mx, cur, ps){
+      setup({ min: mn, max: mx, cur: cur, presets: ps }, function(v){
+        window.webkit.messageHandlers.board.postMessage({ type:'camZoom', z: v });
+      });
+    };
+    return { setup: setup, reset: reset, get: function(){ return z; } };
+  })();
+
   var Cam = (function(){
     var video = $('camVideo'), stream = null, track = null, live = false, pending = null;
     function post(t){ window.webkit.messageHandlers.board.postMessage({ type:t }); }
@@ -1535,12 +1694,32 @@
           if(!$('cam').classList.contains('show')){ s.getTracks().forEach(function(t){ t.stop(); }); return; }
           stream = s; track = s.getVideoTracks()[0];
           video.srcObject = s;
+          setupWebZoom();
           var p = video.play(); if(p && p.catch) p.catch(function(){});
           setLive(true);
         })
         .catch(function(){ setLive(false); });
     }
+    // 카메라가 줌을 지원하면(안드로이드 크롬 등) 그 기능을, 아니면 화면 확대 후 가운데를 잘라 찍는다
+    var digital = 1;
+    function setupWebZoom(){
+      var caps = null;
+      try{ caps = track.getCapabilities && track.getCapabilities(); }catch(e){}
+      if(caps && caps.zoom && caps.zoom.max > caps.zoom.min){
+        var zmin = caps.zoom.min, zmax = Math.min(caps.zoom.max, 10);
+        Zoom.setup({ min: zmin, max: zmax, cur: Math.max(zmin, 1), presets: [zmin < 1 ? zmin : 1, 2, 5] }, function(v){
+          try{ track.applyConstraints({ advanced:[{ zoom: v }] }).catch(function(){}); }catch(e){}
+        });
+      } else {
+        Zoom.setup({ min: 1, max: 5, cur: 1, presets: [1, 2, 3] }, function(v){
+          digital = v;
+          video.style.transform = v > 1 ? 'scale(' + v + ')' : '';
+        });
+      }
+    }
     function stop(){
+      Zoom.reset();
+      digital = 1; video.style.transform = '';
       if(nativeApp) post('camStop');
       if(stream){ stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; track = null; video.srcObject = null; }
       setLive(false);
@@ -1551,12 +1730,14 @@
       if(nativeApp){ pending = cb; post('camCapture'); return; }
       function grab(){
         if(!video.videoWidth) return cb(null);
+        var vw = video.videoWidth, vh = video.videoHeight, sw = Math.round(vw / digital), sh = Math.round(vh / digital);
         var c = document.createElement('canvas');
-        c.width = video.videoWidth; c.height = video.videoHeight;
-        c.getContext('2d').drawImage(video, 0, 0);
+        c.width = sw; c.height = sh;
+        c.getContext('2d').drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, sw, sh);
         c.toBlob(function(b){ cb(b); }, 'image/jpeg', 0.95);
       }
-      if(window.ImageCapture && track){
+      // 화면 확대(디지털 줌) 중이면 보이는 대로 잘라야 하므로 영상에서 바로 뜬다
+      if(window.ImageCapture && track && digital === 1){
         try{ new ImageCapture(track).takePhoto().then(cb, grab); return; }catch(e){}
       }
       grab();
