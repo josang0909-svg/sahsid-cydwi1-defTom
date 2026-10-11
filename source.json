@@ -1,0 +1,28 @@
+{
+  "name": "현장 보드판",
+  "identifier": "com.josang0909.fieldboard.source",
+  "website": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom",
+  "apps": [
+    {
+      "name": "현장 보드판",
+      "bundleIdentifier": "com.josang0909.fieldboard",
+      "developerName": "josang0909",
+      "localizedDescription": "현장 사진 보드판 (개인용)",
+      "iconURL": "https://raw.githubusercontent.com/josang0909-svg/sahsid-cydwi1-defTom/main/icon-512.png",
+      "version": "1.0.2",
+      "versionDate": "2026-10-11T15:20:03Z",
+      "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.2/Board.ipa",
+      "size": 119005,
+      "versions": [
+        {
+          "version": "1.0.2",
+          "date": "2026-10-11T15:20:03Z",
+          "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.2/Board.ipa",
+          "size": 119005,
+          "minOSVersion": "15.0"
+        }
+      ]
+    }
+  ],
+  "news": []
+}
