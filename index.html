@@ -377,7 +377,14 @@
     .modal-actions button{flex:none;padding:20px 8px;}
     .modal-actions .btn-save{padding:30px 8px;font-size:17px;}
     /* 위치 입력: 왼쪽(양식·결과) 칸은 넓게, 키패드는 오른쪽 끝에 붙여 엄지가 닿는 자리(3번 열)로 */
-    #locSheet .sheet-inner{width:min(560px, 66vw);}
+    /* 창 폭은 손상 목록 창과 같게, 왼쪽 글씨는 작게 */
+    .loc-grid .chips .chip{padding:7px 10px;font-size:12px;}
+    .loc-grid .seg{padding:12px 10px;}
+    .loc-grid .seg .txt{font-size:calc(17px * var(--sk, 1));}
+    .loc-grid .seg .slot{font-size:calc(18px * var(--sk, 1));min-width:calc(46px * var(--sk, 1));padding:7px calc(6px * var(--sk, 1));}
+    .loc-grid .locprev{font-size:11.5px;}
+    .loc-grid .locprev b{font-size:15px;}
+    .loc-grid .hintline{font-size:11px;}
     .loc-grid{display:grid;grid-template-columns:minmax(0,1fr) 160px;column-gap:16px;align-items:start;padding-right:0;}
     .loc-grid .keypad button{height:50px;}
     .modal.aligned{display:none;padding:0;}
