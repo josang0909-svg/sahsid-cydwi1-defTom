@@ -38,8 +38,9 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     /// 플래시 켬/끔 (웹페이지 버튼)
     private var flashOn = false
     /// 웹페이지가 원하는 사진 폭. 웹페이지에는 이 크기로 줄여 보내고(빠르게), 원본은 여기 들고 있다가 저장할 때 붙인다.
-    private var captureMaxW: CGFloat = 0
+    private var captures: [Int64: (maxW: CGFloat, id: Int)] = [:]   // camQueue: 찍는 중인 사진별 크기·번호 (번호는 웹페이지가 붙임)
     private var lastPhoto: Data?
+    private var lastPhotoId = 0                // 메인: lastPhoto가 몇 번 사진의 원본인지
     /// 웹페이지가 알려 준 뷰파인더(4:3) 위치. 카메라 미리보기를 이 자리에만 띄운다.
     private var camRect: CGRect?
 
@@ -145,14 +146,15 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
         switch type {
-        case "save": save(images: body["images"] as? [String] ?? [], original: body["original"] as? Bool ?? false)
+        case "save": save(images: body["images"] as? [String] ?? [], original: body["original"] as? Bool ?? false,
+                          originalId: body["originalId"] as? Int)
         case "geoStart":
             if location.authorizationStatus == .notDetermined { location.requestWhenInUseAuthorization() }
             location.startUpdatingLocation()
         case "geoStop": location.stopUpdatingLocation()
         case "camStart": startCamera()
         case "camStop": stopCamera()
-        case "camCapture": capturePhoto(maxW: CGFloat(body["maxW"] as? Double ?? 0))
+        case "camCapture": capturePhoto(maxW: CGFloat(body["maxW"] as? Double ?? 0), id: body["id"] as? Int ?? 0)
         case "camFlash":
             let on = body["on"] as? Bool ?? false
             camQueue.async { self.flashOn = on }
@@ -393,25 +395,27 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         camQueue.async { self.photoOutput.connection(with: .video)?.videoOrientation = orientation }
     }
 
-    private func capturePhoto(maxW: CGFloat) {
+    private func capturePhoto(maxW: CGFloat, id: Int) {
         camQueue.async {
-            guard self.session.isRunning else { return self.js("window.__camShot && window.__camShot(null)") }
-            self.captureMaxW = maxW
+            guard self.session.isRunning else { return self.js("window.__camShot && window.__camShot(null, false, \(id))") }
             let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+            self.captures[settings.uniqueID] = (maxW, id)
             if self.photoOutput.supportedFlashModes.contains(.on) { settings.flashMode = self.flashOn ? .on : .off }
             self.photoOutput.capturePhoto(with: settings, delegate: self)
         }
     }
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        let key = photo.resolvedSettings.uniqueID
+        let (maxW, id) = camQueue.sync { self.captures.removeValue(forKey: key) ?? (0, 0) }
         guard error == nil, let data = photo.fileDataRepresentation() else {
-            return js("window.__camShot && window.__camShot(null)")
+            return js("window.__camShot && window.__camShot(null, false, \(id))")
         }
-        DispatchQueue.main.async { self.lastPhoto = data }   // 저장(save)은 메인에서 읽는다
+        // 저장(save)은 메인에서 읽는다. 번호를 같이 둬서 다른 사진의 원본이 붙지 않게 한다
+        DispatchQueue.main.async { self.lastPhoto = data; self.lastPhotoId = id }
         // 웹페이지에는 보드판을 찍을 크기로 줄여서 보낸다 (원본 12MP를 문자열로 넘기면 느려지고 메모리가 쌓임)
-        let maxW = camQueue.sync { captureMaxW }
         let small = Self.downscale(data, maxWidth: maxW) ?? data
-        js("window.__camShot && window.__camShot('data:image/jpeg;base64,\(small.base64EncodedString())', true)")
+        js("window.__camShot && window.__camShot('data:image/jpeg;base64,\(small.base64EncodedString())', true, \(id))")
     }
 
     private static func downscale(_ data: Data, maxWidth: CGFloat) -> Data? {
@@ -429,21 +433,25 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
 
     // MARK: - 사진 저장
 
-    private func save(images: [String], original: Bool) {
-        var photos = images.compactMap { url -> Data? in
+    private func save(images: [String], original: Bool, originalId: Int?) {
+        let photos = images.compactMap { url -> Data? in
             guard let comma = url.firstIndex(of: ",") else { return nil }
             return Data(base64Encoded: String(url[url.index(after: comma)...]))
         }
-        if original, let orig = lastPhoto { photos.append(orig) }
-        lastPhoto = nil
-        guard !photos.isEmpty else { return finishSave(false, "저장할 사진이 없습니다") }
+        // 보드판 사진이 빠지면 원본만 저장되지 않도록 아예 저장하지 않는다
+        guard !photos.isEmpty, photos.count == images.count else { return finishSave(false, "보드판 사진을 만들지 못했습니다") }
+        var all = photos
+        if original, let orig = lastPhoto, originalId == nil || originalId == lastPhotoId {
+            all.append(orig)
+            lastPhoto = nil
+        }
 
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
             guard status == .authorized || status == .limited else {
                 return self.finishSave(false, "설정 > 현장 보드판에서 사진 접근을 허용해 주세요")
             }
             PHPhotoLibrary.shared().performChanges({
-                for data in photos {
+                for data in all {
                     PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
                 }
             }) { ok, _ in self.finishSave(ok, ok ? nil : "저장 실패") }
