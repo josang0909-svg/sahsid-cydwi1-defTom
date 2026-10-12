@@ -109,7 +109,7 @@
   .lblrow{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);}
   .lblrow:last-child{border-bottom:none;}
   .lblrow .n{width:26px;flex:none;font-size:12px;color:var(--muted);text-align:center;}
-  .lblrow input{flex:1;min-width:0;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:15px;user-select:text;}
+  .lblrow input{flex:1;min-width:0;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:16px;user-select:text;}
   .lblrow input:focus{outline:none;border-color:var(--accent);}
 
   .prev-wrap{background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;justify-content:center;}
@@ -120,7 +120,7 @@
   table.bprev.trans td{background:rgba(0,0,0,0.5);color:#fff;border-color:rgba(255,255,255,0.8);}
 
   .add-row{display:flex;gap:8px;margin-bottom:12px;}
-  .add-row input{flex:1;padding:12px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px;user-select:text;}
+  .add-row input{flex:1;padding:12px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:16px;user-select:text;}
   .add-row input:focus{outline:none;border-color:var(--accent);}
   .add-row button{padding:12px 18px;border-radius:9px;border:none;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:14px;}
 
@@ -665,7 +665,7 @@
   if(!values.cat && tree.cats.length) values.cat = tree.cats[0].name;
 
   var geo = { lat:null, lon:null, alt:null };
-  var pendingStamped = null, pendingOrig = null, pendingDataUrl = null;
+  var pendingStamped = null, pendingOrig = null;
   var isAndroid = /Android/i.test(navigator.userAgent);
   // 아이폰 앱(SideStore 설치본) 안에서 실행 중이면 사진 앱에 바로 저장
   var nativeApp = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.board);
@@ -840,10 +840,13 @@
           e.preventDefault();
           dragIdx = parseInt(h.parentNode.getAttribute('data-idx'), 10);
           h.parentNode.classList.add('dragging');
+          document.addEventListener('touchmove', onMove, {passive:false});
+          document.addEventListener('touchend', endDrag);
+          document.addEventListener('touchcancel', endDrag);
         }, {passive:false});
       });
     }
-    container.addEventListener('touchmove', function(e){
+    function onMove(e){
       if(dragIdx == null) return;
       e.preventDefault();
       var t = e.touches[0];
@@ -863,13 +866,14 @@
       draw();
       var nr = container.querySelector('.opt[data-idx="' + to + '"]');
       if(nr) nr.classList.add('dragging');
-    }, {passive:false});
+    }
     function endDrag(){
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', endDrag);
+      document.removeEventListener('touchcancel', endDrag);
       if(dragIdx == null) return;
       dragIdx = null; draw(); refreshAll();
     }
-    container.addEventListener('touchend', endDrag);
-    container.addEventListener('touchcancel', endDrag);
 
     return { draw: draw };
   }
@@ -986,7 +990,8 @@
   }
   $('gpsToggle').addEventListener('change', function(){
     settings.gps = $('gpsToggle').checked; saveSettings();
-    if(settings.gps) startGeo();
+    if(!settings.gps) stopGeo();
+    else if($('cam').classList.contains('show')) startGeo();
     renderGps();
   });
   $('origToggle').addEventListener('change', function(){
@@ -1189,9 +1194,11 @@
     $('cam').classList.add('show');
     renderCam();
     Cam.start();
+    if(settings.gps) startGeo();
   });
   $('camBack').addEventListener('click', function(){
     Cam.stop();
+    stopGeo();
     $('cam').classList.remove('show');
     $('home').classList.remove('hide');
     renderHome();
@@ -1565,6 +1572,12 @@
     }, function(){ if(settings.gps) $('ovGps').textContent = 'GPS 불가'; },
     { enableHighAccuracy:false, maximumAge:20000, timeout:15000 });
   }
+  // 촬영 화면을 나가면 위치 추적을 멈춰 배터리를 아낀다
+  function stopGeo(){
+    if(watchId == null) return;
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
 
   /* ================= 캔버스 보드판 ================= */
   function drawBoard(ctx, W, H){
@@ -1597,7 +1610,7 @@
     else { x = W - boardW - m; y = m; }
 
     var white = (settings.bg === 'white');
-    var lw = Math.max(1, Math.round(fs * 0.07));
+    var lw = Math.max(2, Math.round(fs * 0.08));
 
     ctx.fillStyle = white ? '#ffffff' : 'rgba(0,0,0,0.45)';
     ctx.fillRect(x, y, boardW, boardH);
@@ -1698,7 +1711,6 @@
       }
       c.fillStyle = '#f2c94c';
       c.fillRect(w - 22, mid - 1, 20, 2);
-      c.globalAlpha = 1;
     }
     function showRuler(){
       clearTimeout(hideT);
@@ -1776,7 +1788,7 @@
         window.webkit.messageHandlers.board.postMessage({ type:'camZoom', z: v });
       });
     };
-    return { setup: setup, reset: reset, get: function(){ return z; } };
+    return { setup: setup, reset: reset };
   })();
 
   /* ================= 플래시 =================
@@ -1816,14 +1828,14 @@
      누른 뒤 화면을 위아래로 끌면 밝기(위 = 밝게). 두 손가락은 줌. */
   var Focus = (function(){
     var frame = $('camFrame'), box = $('focusBox'), sun = $('focusSun'), lockTag = $('focusLock');
-    var backend = null, bias = 0, active = false, dimT = 0, hideT = 0, pointers = 0, g = null;
+    var backend = null, bias = 0, active = false, dimT = 0, g = null;
     var RANGE = 2, PX = 70;   // 밝기 ±2단, 70px = 1단
     function setup(fn){ backend = fn; }
-    function reset(){ backend = null; hide(); }
+    function reset(){ backend = null; cancel(); hide(); }
     function hide(){ active = false; box.classList.remove('show'); lockTag.classList.remove('show'); bias = 0; }
     function drawSun(){ sun.style.top = (50 - bias / RANGE * 50) + '%'; }
     function show(x, y, locked){
-      clearTimeout(dimT); clearTimeout(hideT);
+      clearTimeout(dimT);
       box.style.left = x + 'px'; box.style.top = y + 'px';
       box.classList.toggle('left', x > frame.clientWidth - 120);
       box.classList.add('show'); box.classList.remove('dim');
@@ -1841,9 +1853,8 @@
 
     function isControl(t){ return t.closest && t.closest('button, .zoom-ctl'); }
     frame.addEventListener('pointerdown', function(e){
-      pointers++;
+      if(!e.isPrimary){ cancel(); return; }          // 두 번째 손가락 = 줌
       if(!backend || isControl(e.target)) return;
-      if(pointers > 1){ cancel(); return; }          // 두 손가락 = 줌
       g = { x: e.clientX, y: e.clientY, t: Date.now(), mode: null, bias: bias, ev: e };
       g.lp = setTimeout(function(){ if(g && !g.mode){ g.mode = 'lock'; tapAt(g.ev, true); } }, 650);
     });
@@ -1862,9 +1873,8 @@
         if(backend) backend.bias(bias);
       }
     });
-    function up(){
-      pointers = Math.max(0, pointers - 1);
-      if(!g) return;
+    function up(e){
+      if(!g || !e.isPrimary) return;
       clearTimeout(g.lp);
       if(!g.mode && Date.now() - g.t < 650) tapAt(g.ev, false);
       if(g.mode === 'bias') dimT = setTimeout(function(){ box.classList.add('dim'); }, 2000);
@@ -1872,7 +1882,7 @@
     }
     function cancel(){ if(g){ clearTimeout(g.lp); g = null; } }
     frame.addEventListener('pointerup', up);
-    frame.addEventListener('pointercancel', function(){ pointers = Math.max(0, pointers - 1); cancel(); });
+    frame.addEventListener('pointercancel', cancel);
     return { setup: setup, reset: reset };
   })();
   if(nativeApp && window.__boardApp && window.__boardApp.focus){
@@ -1994,6 +2004,7 @@
       }
     }
     function stop(){
+      pending = null;
       Zoom.reset();
       Flash.reset();
       Focus.reset();
@@ -2008,6 +2019,7 @@
       if(nativeApp){
         pending = cb;
         window.webkit.messageHandlers.board.postMessage({ type:'camCapture', maxW: settings.res || 0 });
+        setTimeout(function(){ if(pending === cb){ pending = null; cb(null); } }, 8000);
         return;
       }
       function grab(){
@@ -2047,6 +2059,7 @@
     setTimeout(function(){ $('cam').classList.remove('flash'); }, 120);
     Cam.capture(function(shot){
       shooting = false;
+      if(!$('cam').classList.contains('show')) return;
       if(!shot){ showToast('촬영 실패'); return; }
       if(shot.nativeOrig){ pendingOrig = 'native'; return loadAndProcess(shot.url); }
       handlePhoto(shot);
@@ -2063,7 +2076,7 @@
     lastHw = now;
     if($('previewModal').classList.contains('show')) return $('saveBtn').click();
     if(!$('cam').classList.contains('show')) return;
-    if(document.querySelector('.sheet.show')) return;
+    if(document.querySelector('.sheet.show') || screenStack.length) return;
     $('captureBtn').click();
   };
   document.addEventListener('keydown', function(e){
@@ -2115,7 +2128,7 @@
     // 아이폰 앱·안드로이드는 [사진 사용]을 누르면 바로 저장되므로 안내 없음
     $('saveHint').textContent = (isAndroid || nativeApp) ? ''
       : '[사진 사용]을 누르면 공유 창이 열립니다. "이미지 저장"을 선택하세요.';
-    pendingStamped = null; pendingDataUrl = null;
+    pendingStamped = null;
     // 큰 dataURL 문자열을 만들지 않고 Blob 하나로 미리보기·저장을 같이 한다 (오래 써도 메모리가 쌓이지 않게)
     workCanvas.toBlob(function(blob){
       if(!blob){ showToast('사진 처리 실패'); return; }
@@ -2150,7 +2163,7 @@
 
   $('retakeBtn').addEventListener('click', function(){
     closePreview();
-    pendingStamped = null; pendingOrig = null; pendingDataUrl = null;
+    pendingStamped = null; pendingOrig = null;
   });
 
   // 안드로이드: 공유 시트 없이 바로 내려받기 (갤러리 'Download' 앨범에 자동 저장)
@@ -2265,7 +2278,7 @@
     setC('--accent-dim', c.accent ? mixColor(c.accent, c.bg || '#181616', 0.55) : '');
     setC('--on-accent', c.bg);
     document.documentElement.classList.toggle('grid-on', ui.grid !== false);
-    if(typeof layoutFrame === 'function') layoutFrame();
+    layoutFrame();
   }
   function uiFmt(row, v){ return row[6] === 'px' ? v + 'px' : Math.round(v * 100) + '%'; }
 
@@ -2336,7 +2349,6 @@
   applyUi();
   renderSetChips();
   renderHome();
-  if(settings.gps) startGeo();
 })();
 </script>
 <script>

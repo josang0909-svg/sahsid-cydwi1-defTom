@@ -58,11 +58,11 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         view.backgroundColor = .black
 
         let content = WKUserContentController()
-        content.add(self, name: "board")
+        content.add(WeakScriptHandler(self), name: "board")
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, zoom: true, hwShutter: true, photos: true, flash: true, focus: true };",
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, photos: true, focus: true };",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
@@ -77,6 +77,9 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         // 페이지 자체는 스크롤하지 않는다 (키보드가 뜰 때 화면이 밀려 카메라 위치가 어긋나던 원인)
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.bounces = false
+        webView.scrollView.minimumZoomScale = 1
+        webView.scrollView.maximumZoomScale = 1
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardDidHide),
                                                name: UIResponder.keyboardDidHideNotification, object: nil)
         webView.uiDelegate = self
@@ -95,6 +98,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     }
 
     @objc private func keyboardDidHide() {
+        webView.scrollView.setZoomScale(1, animated: false)
         webView.scrollView.setContentOffset(.zero, animated: false)
         webView.evaluateJavaScript("window.scrollTo(0,0)")
     }
@@ -148,10 +152,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         case "geoStop": location.stopUpdatingLocation()
         case "camStart": startCamera()
         case "camStop": stopCamera()
-        case "camCapture":
-            captureMaxW = CGFloat(body["maxW"] as? Double ?? 0)
-            capturePhoto()
-        case "camFlash": flashOn = body["on"] as? Bool ?? false
+        case "camCapture": capturePhoto(maxW: CGFloat(body["maxW"] as? Double ?? 0))
+        case "camFlash":
+            let on = body["on"] as? Bool ?? false
+            camQueue.async { self.flashOn = on }
         case "camFocus":
             if let x = body["x"] as? Double, let y = body["y"] as? Double {
                 focus(at: CGPoint(x: x, y: y), lock: body["lock"] as? Bool ?? false)
@@ -173,10 +177,18 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
 
     // MARK: - 실시간 카메라
 
+    /// 켜기·끄기 요청이 엇갈려도 마지막 요청대로 되게 한다.
+    /// wantCamera는 camQueue에서만, cameraOnScreen은 메인에서만 읽고 쓴다.
+    private var wantCamera = false
+    private var cameraOnScreen = false
+
     private func startCamera() {
+        cameraOnScreen = true
+        camQueue.async { self.wantCamera = true }
         AVCaptureDevice.requestAccess(for: .video) { granted in
             guard granted else { return self.js("window.__camState && window.__camState(false)") }
             self.camQueue.async {
+                guard self.wantCamera else { return }
                 if !self.camConfigured { self.configureCamera() }
                 guard self.camConfigured else { return self.js("window.__camState && window.__camState(false)") }
                 if !self.session.isRunning { self.session.startRunning() }
@@ -188,6 +200,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 let presets = self.zoomPresets.map { String($0) }.joined(separator: ",")
                 let hasFlash = self.photoOutput.supportedFlashModes.contains(.on)
                 DispatchQueue.main.async {
+                    guard self.cameraOnScreen else { return }   // 그 사이 촬영 화면을 나갔으면 그대로 둔다
                     self.previewLayer?.isHidden = false
                     self.setShutterButtons(true)
                     self.updateCameraOrientation()
@@ -220,9 +233,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         zoomPresets = presets
         session.beginConfiguration()
         session.sessionPreset = .photo
-        if session.canAddInput(input) { session.addInput(input) }
-        if session.canAddOutput(photoOutput) { session.addOutput(photoOutput) }
+        let ok = session.canAddInput(input) && session.canAddOutput(photoOutput)
+        if ok { session.addInput(input); session.addOutput(photoOutput) }
         session.commitConfiguration()
+        guard ok else { return }   // 실패하면 다음에 다시 시도
         camConfigured = true
         DispatchQueue.main.async {
             let layer = AVCaptureVideoPreviewLayer(session: self.session)
@@ -362,9 +376,13 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     }
 
     private func stopCamera() {
+        cameraOnScreen = false
         setShutterButtons(false)
         previewLayer?.isHidden = true
-        camQueue.async { if self.session.isRunning { self.session.stopRunning() } }
+        camQueue.async {
+            self.wantCamera = false
+            if self.session.isRunning { self.session.stopRunning() }
+        }
     }
 
     /// 화면이 왼쪽·오른쪽 가로 중 어느 쪽인지에 맞춰 미리보기와 사진 방향을 돌린다.
@@ -372,12 +390,13 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         let orientation: AVCaptureVideoOrientation =
             view.window?.windowScene?.interfaceOrientation == .landscapeLeft ? .landscapeLeft : .landscapeRight
         previewLayer?.connection?.videoOrientation = orientation
-        photoOutput.connection(with: .video)?.videoOrientation = orientation
+        camQueue.async { self.photoOutput.connection(with: .video)?.videoOrientation = orientation }
     }
 
-    private func capturePhoto() {
+    private func capturePhoto(maxW: CGFloat) {
         camQueue.async {
             guard self.session.isRunning else { return self.js("window.__camShot && window.__camShot(null)") }
+            self.captureMaxW = maxW
             let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
             if self.photoOutput.supportedFlashModes.contains(.on) { settings.flashMode = self.flashOn ? .on : .off }
             self.photoOutput.capturePhoto(with: settings, delegate: self)
@@ -388,9 +407,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         guard error == nil, let data = photo.fileDataRepresentation() else {
             return js("window.__camShot && window.__camShot(null)")
         }
-        lastPhoto = data
+        DispatchQueue.main.async { self.lastPhoto = data }   // 저장(save)은 메인에서 읽는다
         // 웹페이지에는 보드판을 찍을 크기로 줄여서 보낸다 (원본 12MP를 문자열로 넘기면 느려지고 메모리가 쌓임)
-        let small = Self.downscale(data, maxWidth: captureMaxW) ?? data
+        let maxW = camQueue.sync { captureMaxW }
+        let small = Self.downscale(data, maxWidth: maxW) ?? data
         js("window.__camShot && window.__camShot('data:image/jpeg;base64,\(small.base64EncodedString())', true)")
     }
 
@@ -510,5 +530,14 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         a.addAction(UIAlertAction(title: "취소", style: .cancel) { _ in completionHandler(nil) })
         a.addAction(UIAlertAction(title: "확인", style: .default) { _ in completionHandler(a.textFields?.first?.text) })
         present(a, animated: true)
+    }
+}
+
+/// WKUserContentController가 화면을 강하게 붙잡지 않도록 중간에 끼우는 약한 참조
+private final class WeakScriptHandler: NSObject, WKScriptMessageHandler {
+    weak var target: WKScriptMessageHandler?
+    init(_ target: WKScriptMessageHandler) { self.target = target }
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        target?.userContentController(controller, didReceive: message)
     }
 }
