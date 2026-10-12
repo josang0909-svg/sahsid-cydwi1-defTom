@@ -244,7 +244,7 @@
   .zoom-ctl button{width:36px;height:36px;border-radius:50%;border:none;padding:0;background:rgba(0,0,0,0.45);
     color:#fff;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
   .zoom-ctl button.on{width:40px;height:40px;color:#f2c94c;font-size:12.5px;background:rgba(0,0,0,0.6);}
-  #zoomRuler{position:absolute;right:58px;top:50%;transform:translateY(-50%);z-index:4;pointer-events:none;
+  #zoomRuler{position:absolute;right:58px;top:0;z-index:4;pointer-events:none;
     opacity:0;transition:opacity .25s;}
   #zoomRuler.show{opacity:1;transition:none;}
   #cam.flash #camFrame::after{content:'';position:absolute;inset:0;background:#fff;opacity:.6;z-index:5;pointer-events:none;}
@@ -347,7 +347,6 @@
     .modal-actions{flex-direction:column;justify-content:flex-end;width:var(--dmg-w);min-width:140px;padding:14px 10px;}
     .modal-actions button{flex:none;padding:20px 8px;}
     .modal-actions .btn-save{padding:30px 8px;font-size:17px;}
-    #locSheet .sheet-inner{width:min(780px, 88vw);}
     .loc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start;}
     .loc-grid .keypad button{height:50px;}
     .modal.aligned{display:none;padding:0;}
@@ -1746,27 +1745,32 @@
       if(ruler.classList.contains('show')) drawRuler();
     }
     function drawRuler(){
-      var dpr = window.devicePixelRatio || 1, w = 46, h = Math.min(260, Math.max(120, ($('camFrame').clientHeight || 300) - 40));
+      // 선명하게: 화면 픽셀에 딱 맞춘 크기·위치에 그리고, 눈금도 픽셀 경계에 맞춘다 (반 픽셀이면 흐려짐)
+      var dpr = Math.max(1, Math.round(window.devicePixelRatio || 1)), fh = $('camFrame').clientHeight || 300;
+      var w = 52, h = Math.round(Math.min(260, Math.max(120, fh - 40)) / 2) * 2;
       if(ruler.width !== w * dpr || ruler.height !== h * dpr){
         ruler.width = w * dpr; ruler.height = h * dpr; ruler.style.width = w + 'px'; ruler.style.height = h + 'px';
       }
+      ruler.style.top = Math.round((fh - h) / 2) + 'px';
+      var sn = function(v){ return Math.round(v * dpr) / dpr; }, px = 1 / dpr;
       var c = ruler.getContext('2d'), mid = h / 2, lz = Math.log(z) / Math.LN2;
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
       c.clearRect(0, 0, w, h);
       c.fillStyle = 'rgba(0,0,0,0.45)';
       c.beginPath(); c.moveTo(14, 0); c.arcTo(w, 0, w, h, 14); c.arcTo(w, h, 0, h, 14); c.arcTo(0, h, 0, 0, 14); c.arcTo(0, 0, w, 0, 14); c.fill();
-      c.font = '600 10px -apple-system,sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
+      c.font = '600 12px -apple-system,sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
       for(var v = Math.ceil(min * 10) / 10; v <= max + 1e-6; v += (v < 2 ? 0.1 : v < 10 ? 0.5 : 1)){
         v = Math.round(v * 10) / 10;
         var y = mid - (Math.log(v) / Math.LN2 - lz) * PX;
         if(y < 6 || y > h - 6) continue;
         var major = presets.some(function(p){ return Math.abs(p - v) < 0.01; }) || v === 5 || v === 10;
         c.fillStyle = major ? '#fff' : 'rgba(255,255,255,0.5)';
-        c.fillRect(w - (major ? 16 : 9), y - 0.5, major ? 12 : 6, 1);
-        if(major){ c.fillText(label(v), w - 19, y); }
+        var th = major ? sn(1.5) || px : Math.max(px, sn(1)), ty = sn(y - th / 2);
+        c.fillRect(w - (major ? 17 : 10), ty, major ? 13 : 7, th);
+        if(major){ c.fillText(label(v), w - 21, sn(y)); }
       }
       c.fillStyle = '#f2c94c';
-      c.fillRect(w - 22, mid - 1, 20, 2);
+      c.fillRect(w - 24, mid - 1, 22, 2);
     }
     function showRuler(){
       clearTimeout(hideT);
