@@ -202,7 +202,7 @@
   #camFrame{touch-action:none;}
   #camVideo{transform-origin:50% 50%;}
   .zoom-ctl{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:4;display:none;
-    flex-direction:column-reverse;align-items:center;gap:6px;padding:6px 4px;border-radius:24px;
+    flex-direction:column;align-items:center;gap:6px;padding:6px 4px;border-radius:24px;
     background:rgba(0,0,0,0.38);touch-action:none;user-select:none;-webkit-user-select:none;}
   #cam.live .zoom-ctl.on{display:flex;}
   .zoom-ctl button{width:36px;height:36px;border-radius:50%;border:none;padding:0;background:rgba(0,0,0,0.45);
@@ -1528,7 +1528,7 @@
      웹: 카메라가 줌을 지원하면 그 기능, 아니면 화면을 확대해 가운데를 잘라 찍는다. */
   var Zoom = (function(){
     var ctl = $('zoomCtl'), ruler = $('zoomRuler');
-    var z = 1, min = 1, max = 1, presets = [], apply = null, raf = 0, hideT = 0, PX = 110; // 끌기 110px = 2배
+    var z = 1, min = 1, max = 1, presets = [], apply = null, raf = 0, hideT = 0, PX = 110; // 끌기 110px = 2배, 아래로 = 확대
     function clamp(v){ return Math.max(min, Math.min(max, v)); }
     function label(v, active){
       var t = v < 1 ? v.toFixed(1).replace(/^0/, '') : (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1));
@@ -1557,7 +1557,7 @@
       c.font = '600 10px -apple-system,sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
       for(var v = Math.ceil(min * 10) / 10; v <= max + 1e-6; v += (v < 2 ? 0.1 : v < 10 ? 0.5 : 1)){
         v = Math.round(v * 10) / 10;
-        var y = mid - (Math.log(v) / Math.LN2 - lz) * PX;
+        var y = mid + (Math.log(v) / Math.LN2 - lz) * PX;
         if(y < 6 || y > h - 6) continue;
         var major = presets.some(function(p){ return Math.abs(p - v) < 0.01; }) || v === 5 || v === 10;
         c.fillStyle = major ? '#fff' : 'rgba(255,255,255,0.5)';
@@ -1606,7 +1606,7 @@
     });
     ctl.addEventListener('pointermove', function(e){
       if(!drag) return;
-      var dy = drag.y - e.clientY;
+      var dy = e.clientY - drag.y; // 아래로 끌면 확대, 위로 끌면 축소 (기본 카메라와 같은 방향)
       if(!drag.moved && Math.abs(dy) < 6) return;
       drag.moved = true;
       showRuler();
