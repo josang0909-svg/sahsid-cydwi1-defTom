@@ -26,7 +26,9 @@
     --dmg-fs:12.5px; --dmg-pad:10px; --shutter:76px;
     --r-btn:9px; --cam-gap:6px;
   }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+  /* 꾹 눌러도 글자가 선택되거나 복사 메뉴가 뜨지 않게, 입력칸만 예외 */
+  input,textarea,[contenteditable]{user-select:text;-webkit-user-select:text;-webkit-touch-callout:default;}
   /* iOS는 가로 화면에서 글씨를 제멋대로 키워 화면마다 크기가 달라진다 → 끈다 */
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
   html,body{
@@ -69,7 +71,9 @@
   .tn-row:last-child{border-bottom:none;}
   .tn-row .tn-l{width:118px;flex:none;font-size:13px;font-weight:600;}
   .tn-row input[type=range]{flex:1;min-width:0;accent-color:var(--accent);}
-  .tn-row .tn-v{width:52px;flex:none;text-align:right;font-size:12.5px;color:var(--muted);font-family:"Courier New",monospace;}
+  .tn-row .tn-v{width:58px;flex:none;text-align:right;font-size:16px;padding:6px 6px;border-radius:7px;border:1px solid var(--line);
+    background:var(--field);color:var(--text);font-variant-numeric:tabular-nums;}
+  .tn-row .tn-u{width:20px;flex:none;font-size:12px;color:var(--muted);}
   .tn-step{width:34px;height:34px;flex:none;border-radius:8px;border:1px solid var(--line);background:var(--card-2);color:var(--text);font-size:16px;}
   .tn-sw{display:flex;flex-wrap:wrap;gap:8px;flex:1;}
   .tn-dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);padding:0;}
@@ -140,7 +144,7 @@
   .opt .lbl{flex:1;min-width:0;font-size:16px;padding:12px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .opt .lbl small{display:block;font-size:12px;color:var(--muted);margin-top:2px;}
   .opt .act{flex:none;padding:8px 8px;font-size:12.5px;background:none;border:none;color:var(--muted);font-weight:600;}
-  .opt .act.edit{color:var(--accent);}
+  .opt .act.edit{color:var(--accent);font-size:22px;line-height:1;padding:6px 10px;}
   .opt .act.del{color:var(--danger);}
   .opt .ar{color:var(--muted);font-size:15px;padding-right:4px;}
 
@@ -245,9 +249,14 @@
   .zoom-ctl button{width:36px;height:36px;border-radius:50%;border:none;padding:0;background:rgba(0,0,0,0.45);
     color:#fff;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
   .zoom-ctl button.on{width:40px;height:40px;color:#f2c94c;font-size:12.5px;background:rgba(0,0,0,0.6);}
-  #zoomRuler{position:absolute;right:58px;top:0;z-index:4;pointer-events:none;
+  #zoomRuler{position:absolute;right:58px;top:0;width:52px;border-radius:14px;background:rgba(0,0,0,0.45);overflow:hidden;z-index:4;pointer-events:none;
     opacity:0;transition:opacity .25s;}
   #zoomRuler.show{opacity:1;transition:none;}
+  #zoomRuler i{position:absolute;right:3px;width:7px;height:1px;margin-top:-0.5px;background:rgba(255,255,255,0.55);}
+  #zoomRuler i.mj{width:13px;height:2px;margin-top:-1px;background:#fff;}
+  #zoomRuler i.cur{width:22px;right:2px;height:2px;margin-top:-1px;background:#f2c94c;}
+  #zoomRuler b{position:absolute;right:20px;transform:translateY(-50%);font-size:12px;font-weight:700;color:#fff;line-height:1;
+    font-variant-numeric:tabular-nums;text-shadow:0 0 2px rgba(0,0,0,0.6);}
   #cam.flash #camFrame::after{content:'';position:absolute;inset:0;background:#fff;opacity:.6;z-index:5;pointer-events:none;}
 
   /* 세로로 들었을 때(웹): 뷰파인더 위, 레일 아래 */
@@ -364,7 +373,9 @@
     .modal-actions{flex-direction:column;justify-content:flex-end;width:var(--dmg-w);min-width:140px;padding:14px 10px;}
     .modal-actions button{flex:none;padding:20px 8px;}
     .modal-actions .btn-save{padding:30px 8px;font-size:17px;}
-    .loc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start;}
+    /* 위치 입력: 왼쪽(양식·결과) 칸은 넓게, 키패드는 오른쪽 끝에 붙여 엄지가 닿는 자리(3번 열)로 */
+    #locSheet .sheet-inner{width:min(560px, 66vw);}
+    .loc-grid{display:grid;grid-template-columns:minmax(0,1fr) 160px;column-gap:16px;align-items:start;padding-right:0;}
     .loc-grid .keypad button{height:50px;}
     .modal.aligned{display:none;padding:0;}
     .modal.aligned.show{display:block;}
@@ -573,7 +584,7 @@
       <video id="camVideo" playsinline muted autoplay></video>
       <div id="camGrid"></div>
       <canvas id="camBoard"></canvas>
-      <canvas id="zoomRuler" width="0" height="0"></canvas>
+      <div id="zoomRuler"></div>
       <div class="zoom-ctl" id="zoomCtl"></div>
       <button class="flash-btn" id="flashBtn" type="button" aria-label="플래시"></button>
       <div class="focus-box" id="focusBox"><div class="sun"><i id="focusSun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></i></div></div>
@@ -788,7 +799,7 @@
     rowsData().forEach(function(r){
       var tr = document.createElement('tr');
       var td1 = document.createElement('td'); td1.className = 'lb'; td1.textContent = r.label;
-      var td2 = document.createElement('td'); td2.textContent = r.value || ' ';
+      var td2 = document.createElement('td'); td2.textContent = splitLines(r.value).join('\n') || ' '; td2.style.whiteSpace = 'pre';
       tr.appendChild(td1); tr.appendChild(td2); table.appendChild(tr);
     });
   }
@@ -1652,13 +1663,22 @@
     drawBoard(ctx, W, H);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
+  function splitLines(v){
+    return String(v || '').split(/\s*\/\/\s*|\n/);
+  }
   function drawBoard(ctx, W, H){
     var rows = rowsData(), rawLabels = settings.labels;
     var mult = settings.size / 100;
     var fs = Math.max(11, Math.round(W * 0.024 * mult));   // 100% = 기존 보드판 앱 글자 크기
     var padX = Math.round(fs * 0.45);
     var rowH = Math.round(fs * (settings.rowH || 1.2));     // 줄 높이: 글자 크기에 맞춤
-    var boardH = rowH * rows.length;
+    // 줄바꿈: 내용에 // (또는 엔터)가 있으면 그 칸만 여러 줄로
+    var lines = rows.map(function(r){ return splitLines(r.value); });
+    var lineH = Math.round(fs * 1.15);
+    var rowHs = lines.map(function(ls){ return rowH + (ls.length - 1) * lineH; });
+    var rowTop = [], acc = 0;
+    rowHs.forEach(function(h){ rowTop.push(acc); acc += h; });
+    var boardH = acc;
     var weight = settings.weight || 400;
     var FONT = function(s){ return weight + ' ' + s + 'px -apple-system, "Apple SD Gothic Neo", sans-serif'; };
     var dist = settings.align !== 'center';
@@ -1675,7 +1695,7 @@
     labW = Math.round(labW + padX*2);
 
     var valW = 0;
-    rows.forEach(function(r){ valW = Math.max(valW, ctx.measureText(r.value || '').width); });
+    lines.forEach(function(ls){ ls.forEach(function(t){ valW = Math.max(valW, ctx.measureText(t).width); }); });
     valW = Math.round(Math.max(valW + padX*2, fs * 2.5));   // 가장 긴 내용에 폭을 맞춘다
 
     var boardW = labW + valW;
@@ -1702,13 +1722,13 @@
     ctx.fillRect(x, y + boardH - lw, boardW, lw);
     ctx.fillRect(x, y, lw, boardH);
     ctx.fillRect(x + boardW - lw, y, lw, boardH);
-    for(var i=1;i<rows.length;i++) ctx.fillRect(x, Math.round(y + rowH*i - lw/2), boardW, lw);
+    for(var i=1;i<rows.length;i++) ctx.fillRect(x, Math.round(y + rowTop[i] - lw/2), boardW, lw);
     ctx.fillRect(Math.round(x + labW - lw/2), y, lw, boardH);
 
     ctx.textBaseline = 'middle';
     ctx.fillStyle = white ? '#000000' : '#ffffff';
     rows.forEach(function(r, i){
-      var cy = y + rowH*i + rowH/2;
+      var cy = y + rowTop[i] + rowHs[i]/2;
       ctx.font = FONT(fs);
       var lt = labText[i];
       if(dist && lt.length > 1){
@@ -1723,13 +1743,15 @@
         ctx.fillText(lt, x + labW/2, cy);
       }
       ctx.textAlign = 'left';
-      var v = r.value || '';
-      if(v){
-        var avail = valW - padX*2, vfs = fs;
+      var ls = lines[i], avail = valW - padX*2, y0 = cy - (ls.length - 1) * lineH / 2;
+      ls.forEach(function(v, k){
+        if(!v) return;
+        var vfs = fs;
+        ctx.font = FONT(vfs);
         while(ctx.measureText(v).width > avail && vfs > fs * 0.6){ vfs -= 0.5; ctx.font = FONT(vfs); }
         while(ctx.measureText(v).width > avail && v.length > 1) v = v.slice(0, -1);
-        ctx.fillText(v, x + labW + padX, cy);
-      }
+        ctx.fillText(v, x + labW + padX, y0 + k * lineH);
+      });
     });
 
     if(settings.gps && geo.lat != null){
@@ -1781,32 +1803,22 @@
       if(ruler.classList.contains('show')) drawRuler();
     }
     function drawRuler(){
-      // 선명하게: 화면 픽셀에 딱 맞춘 크기·위치에 그리고, 눈금도 픽셀 경계에 맞춘다 (반 픽셀이면 흐려짐)
-      var dpr = Math.max(1, Math.round(window.devicePixelRatio || 1)), fh = $('camFrame').clientHeight || 300;
-      var w = 52, h = Math.round(Math.min(260, Math.max(120, fh - 40)) / 2) * 2;
-      if(ruler.width !== w * dpr || ruler.height !== h * dpr){
-        ruler.width = w * dpr; ruler.height = h * dpr; ruler.style.width = w + 'px'; ruler.style.height = h + 'px';
-      }
+      // 캔버스 그림은 아이폰 카메라 화면 위에서 흐리게 보여서, 눈금·숫자를 글자(DOM)로 만든다
+      var fh = $('camFrame').clientHeight || 300;
+      var h = Math.round(Math.min(260, Math.max(120, fh - 40)) / 2) * 2;
+      ruler.style.height = h + 'px';
       ruler.style.top = Math.round((fh - h) / 2) + 'px';
-      var sn = function(v){ return Math.round(v * dpr) / dpr; }, px = 1 / dpr;
-      var c = ruler.getContext('2d'), mid = h / 2, lz = Math.log(z) / Math.LN2;
-      c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      c.clearRect(0, 0, w, h);
-      c.fillStyle = 'rgba(0,0,0,0.45)';
-      c.beginPath(); c.moveTo(14, 0); c.arcTo(w, 0, w, h, 14); c.arcTo(w, h, 0, h, 14); c.arcTo(0, h, 0, 0, 14); c.arcTo(0, 0, w, 0, 14); c.fill();
-      c.font = '600 12px -apple-system,sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
+      var mid = h / 2, lz = Math.log(z) / Math.LN2, html = '';
       for(var v = Math.ceil(min * 10) / 10; v <= max + 1e-6; v += (v < 2 ? 0.1 : v < 10 ? 0.5 : 1)){
         v = Math.round(v * 10) / 10;
-        var y = mid - (Math.log(v) / Math.LN2 - lz) * PX;
+        var y = Math.round(mid - (Math.log(v) / Math.LN2 - lz) * PX);
         if(y < 6 || y > h - 6) continue;
         var major = presets.some(function(p){ return Math.abs(p - v) < 0.01; }) || v === 5 || v === 10;
-        c.fillStyle = major ? '#fff' : 'rgba(255,255,255,0.5)';
-        var th = major ? sn(1.5) || px : Math.max(px, sn(1)), ty = sn(y - th / 2);
-        c.fillRect(w - (major ? 17 : 10), ty, major ? 13 : 7, th);
-        if(major){ c.fillText(label(v), w - 21, sn(y)); }
+        html += '<i class="' + (major ? 'mj' : '') + '" style="top:' + y + 'px"></i>';
+        if(major) html += '<b style="top:' + y + 'px">' + label(v) + '</b>';
       }
-      c.fillStyle = '#f2c94c';
-      c.fillRect(w - 24, mid - 1, 22, 2);
+      html += '<i class="cur" style="top:' + mid + 'px"></i>';
+      ruler.innerHTML = html;
     }
     function showRuler(){
       clearTimeout(hideT);
@@ -1831,6 +1843,10 @@
       ctl.classList.toggle('on', max > min);
       set(o.cur || 1);
     }
+    // 잠금·다른 앱에 갔다가 돌아오면 1배로
+    document.addEventListener('visibilitychange', function(){
+      if(apply && Math.abs(z - 1) > 0.01 && 1 >= min - 0.01) set(1);
+    });
     function reset(){
       ctl.classList.remove('on'); ruler.classList.remove('show');
       apply = null; z = 1; min = max = 1; presets = [];
@@ -2456,7 +2472,6 @@
     document.documentElement.classList.toggle('grid-on', ui.grid !== false);
     layoutFrame();
   }
-  function uiFmt(row, v){ return row[6] === 'px' ? v + 'px' : Math.round(v * 100) + '%'; }
 
   function renderUiScreen(){
     ['cam', 'gen'].forEach(function(g){
@@ -2477,16 +2492,28 @@
         var d = document.createElement('div');
         d.className = 'tn-row';
         d.innerHTML = '<span class="tn-l"></span><button class="tn-step">−</button>'
-          + '<input type="range"><button class="tn-step">＋</button><span class="tn-v"></span>';
+          + '<input type="range"><button class="tn-step">＋</button>'
+          + '<input class="tn-v" type="text" inputmode="decimal"><span class="tn-u"></span>';
         d.querySelector('.tn-l').textContent = row[2];
-        var rg = d.querySelector('input'), vv = d.querySelector('.tn-v'), bs = d.querySelectorAll('.tn-step');
+        var rg = d.querySelector('input[type=range]'), vv = d.querySelector('.tn-v'), bs = d.querySelectorAll('.tn-step');
+        var pct = row[6] !== 'px';   // 글씨·화면 크기는 %로 보여 주고 입력받는다
+        d.querySelector('.tn-u').textContent = pct ? '%' : 'px';
         rg.min = row[3]; rg.max = row[4]; rg.step = row[5]; rg.value = cur;
-        vv.textContent = uiFmt(row, cur);
+        function show(v){ vv.value = pct ? Math.round(v * 100) : v; }
+        show(cur);
         function set(v){
           v = Math.min(row[4], Math.max(row[3], Math.round(v * 1000) / 1000));
-          ui[row[1]] = v; rg.value = v; vv.textContent = uiFmt(row, v);
+          ui[row[1]] = v; rg.value = v; show(v);
           applyUi(); save('bd_ui', ui);
         }
+        // 숫자 직접 입력: 엔터·입력칸 벗어날 때 반영 (범위 밖이면 끝값으로)
+        function typed(){
+          var n = parseFloat(String(vv.value).replace(',', '.'));
+          if(isNaN(n)) return show(ui[row[1]] != null ? ui[row[1]] : cur);
+          set(pct ? n / 100 : n);
+        }
+        vv.addEventListener('change', typed);
+        vv.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ vv.blur(); } });
         rg.addEventListener('input', function(){ set(parseFloat(rg.value)); });
         bs[0].addEventListener('click', function(){ set(parseFloat(rg.value) - row[5]); });
         bs[1].addEventListener('click', function(){ set(parseFloat(rg.value) + row[5]); });
