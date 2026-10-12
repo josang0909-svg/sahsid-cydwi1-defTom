@@ -133,6 +133,7 @@
   .add-row{display:flex;gap:8px;margin-bottom:12px;}
   .add-row input,.add-row textarea{flex:1;min-width:0;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:14px;line-height:1.4;user-select:text;}
   textarea{resize:none;overflow:hidden;font-family:inherit;display:block;}
+  #txtSheet{z-index:80;}   /* 이름 수정 창은 손상 목록 등 다른 창보다 항상 위에 */
   .add-row{align-items:flex-start;}
   .add-row input:focus{outline:none;border-color:var(--accent);}
   .add-row button{padding:11px 16px;border-radius:9px;border:none;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:13.5px;min-height:42px;}
