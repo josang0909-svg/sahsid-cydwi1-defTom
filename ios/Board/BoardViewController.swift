@@ -4,6 +4,7 @@ import Photos
 import CoreLocation
 import AVFoundation
 import MediaPlayer
+import AVKit
 
 /// GitHub Pages의 보드판 웹페이지를 띄우는 화면.
 /// 실행할 때마다 최신 페이지를 받아 저장해 두고, 인터넷이 없으면 마지막으로 받은 페이지를 연다.
