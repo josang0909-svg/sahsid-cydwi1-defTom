@@ -281,7 +281,12 @@
   .sheet{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:70;display:none;align-items:flex-end;}
   .sheet.show{display:flex;}
   .sheet-inner{width:100%;padding-left:var(--sl);padding-right:var(--sr);max-height:86vh;background:var(--card);border-radius:18px 18px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
-  .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--line);}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--line);}
+  .sheet-head h3{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sheet-head .mode-sw{flex:none;gap:5px;}
+  .sheet-head .mode-sw .chip{padding:5px 12px;font-size:12px;font-weight:600;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--text);}
+  .sheet-head .mode-sw .chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  .sheet-head .mode-sw{margin-right:6px;}
   .sheet-head h3{margin:0;font-size:14.5px;font-weight:700;}
   .sheet-head button{background:none;border:none;color:var(--accent);font-size:14px;font-weight:700;padding:8px 4px;}
   .sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 16px;}
@@ -646,7 +651,7 @@
 <!-- ============ 위치 입력 시트 ============ -->
 <div class="sheet" id="locSheet">
   <div class="sheet-inner">
-    <div class="sheet-head"><h3 id="lsTitle">위치 입력</h3><button data-closesheet="locSheet">닫기</button></div>
+    <div class="sheet-head"><h3 id="lsTitle">위치 입력</h3><div class="chips mode-sw" id="lsMode"></div><button data-closesheet="locSheet">닫기</button></div>
     <div class="sheet-body" id="lsBody"></div>
   </div>
 </div>
@@ -1469,6 +1474,7 @@
     var sheetBody = $('lsBody');
     sheetBody.innerHTML = '';
     sheetBody.classList.remove('loc-grid');
+    $('lsMode').innerHTML = '';
 
     if(!m){
       sheetBody.appendChild(freeInputBlock(null));
@@ -1479,9 +1485,8 @@
     sheetBody.appendChild(body); sheetBody.appendChild(right);
 
     // 방식 전환
-    var modeRow = document.createElement('div');
-    modeRow.className = 'chips';
-    modeRow.style.marginBottom = '14px';
+    // 양식/임의 전환은 제목 오른쪽에
+    var modeRow = $('lsMode');
     [['form','양식'],['free','임의']].forEach(function(p){
       var b = document.createElement('button');
       b.className = 'chip' + (m.locMode === p[0] ? ' on' : '');
@@ -1491,7 +1496,6 @@
       });
       modeRow.appendChild(b);
     });
-    body.appendChild(modeRow);
 
     if(m.locMode === 'form' && m.forms.length){
       if(m.forms.length > 1){
