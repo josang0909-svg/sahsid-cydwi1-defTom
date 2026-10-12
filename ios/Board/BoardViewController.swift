@@ -3,6 +3,7 @@ import WebKit
 import Photos
 import CoreLocation
 import AVFoundation
+import MediaPlayer
 
 /// GitHub Pages의 보드판 웹페이지를 띄우는 화면.
 /// 실행할 때마다 최신 페이지를 받아 저장해 두고, 인터넷이 없으면 마지막으로 받은 페이지를 연다.
@@ -26,6 +27,12 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     /// 웹페이지 배율 버튼에 보일 배율 (.5, 1, 2, 3 …)
     private var zoomPresets: [Double] = [1, 2]
     private let zoomMaxDisplay: CGFloat = 10
+
+    /// 볼륨 버튼·블루투스 리모컨 셔터 (iOS 17.2+ 는 카메라 앱과 같은 공식 방식, 그 아래는 볼륨 변화 감지)
+    private var shutterInteraction: UIInteraction?
+    private var volumeObservation: NSKeyValueObservation?
+    private let volumeView = MPVolumeView(frame: CGRect(x: -2000, y: -2000, width: 10, height: 10))
+    private var resettingVolume = false
     /// 웹페이지가 알려 준 뷰파인더(4:3) 위치. 카메라 미리보기를 이 자리에만 띄운다.
     private var camRect: CGRect?
 
@@ -48,7 +55,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, zoom: true };",
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, zoom: true, hwShutter: true };",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
@@ -62,6 +69,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.uiDelegate = self
         view.addSubview(webView)
+
+        setupShutterButtons()
 
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBest
@@ -151,6 +160,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 let presets = self.zoomPresets.map { String($0) }.joined(separator: ",")
                 DispatchQueue.main.async {
                     self.previewLayer?.isHidden = false
+                    self.setShutterButtons(true)
                     self.updateCameraOrientation()
                     self.webView.evaluateJavaScript("window.__camState && window.__camState(true)")
                     self.webView.evaluateJavaScript("window.__camZoom && window.__camZoom(\(minD), \(maxD), 1, [\(presets)])")
@@ -207,7 +217,56 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         d.unlockForConfiguration()
     }
 
+    // MARK: - 볼륨 버튼 셔터
+
+    private func setupShutterButtons() {
+        if #available(iOS 17.2, *) {
+            // 카메라가 켜져 있는 동안만 볼륨 버튼이 셔터가 되고, 그 외에는 원래대로 볼륨 조절
+            let interaction = AVCaptureEventInteraction { [weak self] event in
+                if event.phase == .began { self?.hardwareShutter() }
+            }
+            interaction.isEnabled = false
+            view.addInteraction(interaction)
+            shutterInteraction = interaction
+        } else {
+            volumeView.alpha = 0.01
+            view.addSubview(volumeView)
+        }
+    }
+
+    private func setShutterButtons(_ on: Bool) {
+        if #available(iOS 17.2, *) {
+            (shutterInteraction as? AVCaptureEventInteraction)?.isEnabled = on
+            return
+        }
+        let audio = AVAudioSession.sharedInstance()
+        if on {
+            try? audio.setCategory(.ambient, options: [.mixWithOthers])
+            try? audio.setActive(true)
+            volumeObservation = audio.observe(\.outputVolume, options: [.new]) { [weak self] _, change in
+                guard let self = self, let v = change.newValue else { return }
+                DispatchQueue.main.async {
+                    if self.resettingVolume { self.resettingVolume = false; return }
+                    self.hardwareShutter()
+                    // 다음 누름도 감지되게 볼륨을 가운데로 되돌린다 (끝까지 올라가 있으면 변화가 없어서)
+                    if v > 0.9 || v < 0.1, let slider = self.volumeView.subviews.compactMap({ $0 as? UISlider }).first {
+                        self.resettingVolume = true
+                        slider.value = 0.5
+                    }
+                }
+            }
+        } else {
+            volumeObservation = nil
+            try? audio.setActive(false, options: .notifyOthersOnDeactivation)
+        }
+    }
+
+    private func hardwareShutter() {
+        js("window.__hwShutter && window.__hwShutter()")
+    }
+
     private func stopCamera() {
+        setShutterButtons(false)
         previewLayer?.isHidden = true
         camQueue.async { if self.session.isRunning { self.session.stopRunning() } }
     }

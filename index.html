@@ -1770,6 +1770,28 @@
     });
   });
 
+  /* 볼륨 버튼·블루투스 리모컨 셔터
+     촬영 화면에서는 촬영, 결과 화면에서는 [사진 사용]. 아이폰 앱은 앱이 볼륨 버튼을 받아 이 함수를 부른다.
+     리모컨이 키보드 키(Enter·Space·볼륨)로 보내는 경우도 같이 받는다. */
+  var lastHw = 0;
+  window.__hwShutter = function(){
+    var now = Date.now();
+    if(now - lastHw < 600) return;
+    lastHw = now;
+    if($('previewModal').classList.contains('show')) return $('saveBtn').click();
+    if(!$('cam').classList.contains('show')) return;
+    if(document.querySelector('.sheet.show')) return;
+    $('captureBtn').click();
+  };
+  document.addEventListener('keydown', function(e){
+    var t = e.target && e.target.tagName;
+    if(t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+    if(['Enter', ' ', 'AudioVolumeUp', 'AudioVolumeDown', 'VolumeUp', 'VolumeDown', 'Camera'].indexOf(e.key) < 0) return;
+    if(!$('cam').classList.contains('show') && !$('previewModal').classList.contains('show')) return;
+    e.preventDefault();
+    window.__hwShutter();
+  });
+
   fileInput.addEventListener('change', function(e){
     var file = e.target.files[0];
     if(file) handlePhoto(file);
