@@ -53,7 +53,7 @@
     display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--bg);z-index:5;
     padding:calc(12px + var(--st)) calc(14px + var(--sr)) 12px calc(14px + var(--sl));border-bottom:1px solid var(--line);
   }
-  .scr-head h2{margin:0;font-size:16.5px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .scr-head h2{margin:0;font-size:15px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .back-btn{width:36px;height:36px;flex:none;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:17px;}
   .scr-body{padding:14px calc(16px + var(--sr)) calc(34px + var(--sb)) calc(16px + var(--sl));zoom:var(--zoom);}
 
@@ -105,13 +105,13 @@
   .nav-row .ar{color:var(--muted);font-size:15px;}
 
   .chips{display:flex;flex-wrap:wrap;gap:7px;}
-  .chip{padding:10px 15px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13.5px;font-weight:600;}
+  .chip{padding:9px 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13px;font-weight:600;}
   .chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
   .chip.warn{color:var(--danger);border-color:var(--line);}
 
   .setrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid var(--line);}
   .setrow:last-child{border-bottom:none;}
-  .setrow .lab{font-size:13.5px;font-weight:600;flex:none;}
+  .setrow .lab{font-size:13px;font-weight:600;flex:none;}
   .setrow .chips{justify-content:flex-end;}
   .setrow .chip{padding:7px 11px;font-size:12.5px;}
   .setrow input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);}
@@ -119,7 +119,7 @@
   .lblrow{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);}
   .lblrow:last-child{border-bottom:none;}
   .lblrow .n{width:26px;flex:none;font-size:12px;color:var(--muted);text-align:center;}
-  .lblrow input{flex:1;min-width:0;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:16px;user-select:text;}
+  .lblrow input,.lblrow textarea{flex:1;min-width:0;padding:10px 11px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:14px;line-height:1.4;user-select:text;}
   .lblrow input:focus{outline:none;border-color:var(--accent);}
 
   .bcanvas{width:100%;max-width:420px;aspect-ratio:4/3;border-radius:6px;display:block;}
@@ -131,9 +131,11 @@
   table.bprev.trans td{background:rgba(0,0,0,0.5);color:#fff;border-color:rgba(255,255,255,0.8);}
 
   .add-row{display:flex;gap:8px;margin-bottom:12px;}
-  .add-row input{flex:1;padding:12px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:16px;user-select:text;}
+  .add-row input,.add-row textarea{flex:1;min-width:0;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:14px;line-height:1.4;user-select:text;}
+  textarea{resize:none;overflow:hidden;font-family:inherit;display:block;}
+  .add-row{align-items:flex-start;}
   .add-row input:focus{outline:none;border-color:var(--accent);}
-  .add-row button{padding:12px 18px;border-radius:9px;border:none;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:14px;}
+  .add-row button{padding:11px 16px;border-radius:9px;border:none;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:13.5px;min-height:42px;}
 
   .editor{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
   .opt{display:flex;align-items:center;gap:2px;padding:4px 8px 4px 2px;border-bottom:1px solid rgba(255,255,255,0.06);background:var(--card);}
@@ -141,8 +143,8 @@
   .opt.on{background:rgba(182,146,123,0.14);}
   .opt.dragging{background:var(--card-2);}
   .opt .dh{width:36px;height:42px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;touch-action:none;}
-  .opt .lbl{flex:1;min-width:0;font-size:16px;padding:12px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .opt .lbl small{display:block;font-size:12px;color:var(--muted);margin-top:2px;}
+  .opt .lbl{flex:1;min-width:0;font-size:14px;line-height:1.35;padding:12px 2px;overflow:hidden;white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere;}
+  .opt .lbl small{display:block;font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .opt .act{flex:none;padding:8px 8px;font-size:12.5px;background:none;border:none;color:var(--muted);font-weight:600;}
   .opt .act.edit{color:var(--accent);font-size:22px;line-height:1;padding:6px 10px;}
   .opt .act.del{color:var(--danger);}
@@ -168,7 +170,7 @@
   .cam-head{flex:none;display:flex;align-items:center;gap:7px;min-width:0;}
   .cam-back{width:34px;height:34px;flex:none;border-radius:9px;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:17px;padding:0;}
   .cam-title{flex:1;min-width:0;line-height:1.3;}
-  .cam-title b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:13px;font-weight:800;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere;}
+  .cam-title b{white-space:pre-line;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:13px;font-weight:800;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere;}
   .cam-title{cursor:pointer;}
   .cam-title b::after{content:' ▾';color:var(--accent);font-size:11px;}
   .cam-title span{display:block;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -179,7 +181,7 @@
   .rail-list::-webkit-scrollbar{display:none;}
   .comp-btn,.dmg-btn{flex:none;width:100%;border-radius:var(--r-btn);border:1px solid var(--line);background:var(--card);
     color:var(--text);font-weight:700;text-align:center;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere;
-    overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;}
+    overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;white-space:pre-line;}
   .comp-btn{padding:var(--side-pad) 10px;font-size:var(--side-fs);}
   .dmg-btn{padding:var(--dmg-pad) 10px;font-size:var(--dmg-fs);}
   .comp-btn:active,.dmg-btn:active{background:var(--card-2);}
@@ -279,8 +281,8 @@
   .sheet.show{display:flex;}
   .sheet-inner{width:100%;padding-left:var(--sl);padding-right:var(--sr);max-height:86vh;background:var(--card);border-radius:18px 18px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
   .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--line);}
-  .sheet-head h3{margin:0;font-size:15.5px;font-weight:700;}
-  .sheet-head button{background:none;border:none;color:var(--accent);font-size:15px;font-weight:700;}
+  .sheet-head h3{margin:0;font-size:14.5px;font-weight:700;}
+  .sheet-head button{background:none;border:none;color:var(--accent);font-size:14px;font-weight:700;padding:8px 4px;}
   .sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 16px;}
 
   /* 위치 입력 */
@@ -291,20 +293,20 @@
   .chips.one-line{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
   .chips.one-line::-webkit-scrollbar{display:none;}
   .chips.one-line .chip{flex:none;padding-left:10px;padding-right:10px;}
-  .seg .txt{font-size:calc(22px * var(--sk, 1));font-weight:800;letter-spacing:.02em;white-space:nowrap;flex:none;}
+  .seg .txt{font-size:calc(20px * var(--sk, 1));font-weight:800;letter-spacing:.02em;white-space:nowrap;flex:none;}
   .seg input{
     width:64px;padding:10px 6px;font-size:22px;font-weight:800;text-align:center;
     border:2px solid var(--accent);border-radius:9px;background:var(--card);color:var(--text);user-select:text;
   }
   .seg input:focus{outline:none;background:var(--card-2);}
-  .seg .slot{flex:none;min-width:calc(58px * var(--sk, 1));padding:10px calc(8px * var(--sk, 1));font-size:calc(24px * var(--sk, 1));font-weight:800;text-align:center;
+  .seg .slot{flex:none;min-width:calc(58px * var(--sk, 1));padding:9px calc(8px * var(--sk, 1));font-size:calc(21px * var(--sk, 1));font-weight:800;text-align:center;
     border:2px solid var(--line);border-radius:9px;background:var(--card);color:var(--text);}
   .seg .slot.cur{border-color:var(--accent);background:var(--card-2);}
   .seg .slot.fresh{color:var(--muted);}
   .seg .slot:empty::before{content:'?';color:var(--accent-dim);}
   .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
   .keypad button{padding:0;height:54px;border-radius:11px;border:1px solid var(--line);background:var(--card-2);
-    color:var(--text);font-size:23px;font-weight:700;}
+    color:var(--text);font-size:20px;font-weight:700;}
   .keypad button:active{background:var(--line);}
   .keypad .k-fn{font-size:15px;color:var(--muted);}
   .keypad.step{grid-template-columns:1fr 1fr;}
@@ -501,7 +503,7 @@
   <div class="scr-body">
     <div class="hintline">☰ 드래그로 순서 변경 · ✎ 이름 수정 · 이름을 누르면 손상 목록과 위치 양식을 편집합니다. 순서대로 촬영 화면 좌측에 표시됩니다.</div>
     <div class="add-row">
-      <input type="text" id="memNew" placeholder="새 부재명 입력">
+      <textarea id="memNew" rows="1" placeholder="새 부재명 입력"></textarea>
       <button id="memAdd">추가</button>
     </div>
     <div class="editor" id="memBody"></div>
@@ -515,7 +517,7 @@
    <div class="col">
     <div class="sec" style="margin-top:0">
       <div class="t">부재명</div>
-      <div class="card"><div class="lblrow"><input type="text" id="detName"></div></div>
+      <div class="card"><div class="lblrow"><textarea id="detName" rows="1"></textarea></div></div>
     </div>
 
     <div class="sec">
@@ -543,7 +545,7 @@
       <div class="t">손상(내용) 목록</div>
       <div class="hintline">순서대로 촬영 화면 오른쪽 손상 목록에 표시됩니다.</div>
       <div class="add-row">
-        <input type="text" id="noteNew" placeholder="새 손상 항목 입력">
+        <textarea id="noteNew" rows="1" placeholder="새 손상 항목 입력"></textarea>
         <button id="noteAdd">추가</button>
       </div>
       <div class="editor" id="noteBody"></div>
@@ -558,7 +560,7 @@
   <div class="scr-body">
     <div class="hintline" id="scrListHint"></div>
     <div class="add-row">
-      <input type="text" id="scrNewOpt" placeholder="새 항목 입력">
+      <textarea id="scrNewOpt" rows="1" placeholder="새 항목 입력"></textarea>
       <button id="scrAddOpt">추가</button>
     </div>
     <div class="editor" id="scrListBody"></div>
@@ -611,12 +613,23 @@
   </div>
 </div>
 
+<!-- ============ 이름 수정 (여러 줄) ============ -->
+<div class="sheet" id="txtSheet">
+  <div class="sheet-inner">
+    <div class="sheet-head"><h3>수정</h3><button data-closesheet="txtSheet">취소</button></div>
+    <div class="sheet-body">
+      <div class="add-row"><textarea id="txtIn" rows="1"></textarea><button id="txtOk">저장</button></div>
+      <div class="hintline">엔터를 누르면 줄이 바뀝니다. 보드판에도 그대로 줄이 바뀌어 찍힙니다.</div>
+    </div>
+  </div>
+</div>
+
 <!-- ============ 손상 선택 시트 ============ -->
 <div class="sheet" id="noteSheet">
   <div class="sheet-inner">
     <div class="sheet-head"><h3 id="nsTitle">손상 목록</h3><button data-closesheet="noteSheet">닫기</button></div>
     <div class="sheet-body">
-      <div class="add-row"><input type="text" id="nsNew" placeholder="새 손상 항목 입력"><button id="nsAdd">추가</button></div>
+      <div class="add-row"><textarea id="nsNew" rows="1" placeholder="새 손상 항목 입력"></textarea><button id="nsAdd">추가</button></div>
       <div class="editor" id="nsBody"></div>
     </div>
   </div>
@@ -804,6 +817,27 @@
     });
   }
 
+  /* 여러 줄 입력칸: 엔터는 줄바꿈, 줄 수만큼 높이가 늘어난다 */
+  function autoGrow(t){ t.style.height = 'auto'; t.style.height = t.scrollHeight + 2 + 'px'; }
+  document.addEventListener('input', function(e){ if(e.target.tagName === 'TEXTAREA') autoGrow(e.target); });
+  // 추가 버튼 등으로 내용이 지워지거나 채워지면 높이를 다시 맞춘다
+  document.addEventListener('click', function(){
+    setTimeout(function(){ document.querySelectorAll('textarea').forEach(function(t){ if(t.offsetParent) autoGrow(t); }); }, 0);
+  });
+  var txtCb = null;
+  function editText(cur, cb){
+    txtCb = cb;
+    var t = $('txtIn'); t.value = cur;
+    $('txtSheet').classList.add('show');
+    autoGrow(t);
+    setTimeout(function(){ t.focus(); }, 120);
+  }
+  $('txtOk').addEventListener('click', function(){
+    $('txtSheet').classList.remove('show');
+    var cb = txtCb; txtCb = null;
+    if(cb) cb($('txtIn').value);
+  });
+
   /* ================= 목록 편집기 (드래그 + 수정) ================= */
   function makeEditor(container, cfg){
     function draw(){
@@ -843,12 +877,12 @@
           ed.addEventListener('click', function(ev){
             ev.stopPropagation();
             var cur = cfg.str(item);
-            var v = window.prompt('수정', cur);
-            if(v == null) return;
-            v = v.trim();
-            if(!v || v === cur) return;
-            cfg.rename(item, v, idx);
-            cfg.persist(); draw(); refreshAll();
+            editText(cur, function(v){
+              v = v.trim();
+              if(!v || v === cur) return;
+              cfg.rename(item, v, idx);
+              cfg.persist(); draw(); refreshAll();
+            });
           });
           row.appendChild(ed);
         }
@@ -1134,6 +1168,7 @@
     detailMember = m;
     $('detTitle').textContent = m.name;
     $('detName').value = m.name;
+    setTimeout(function(){ autoGrow($('detName')); }, 0);
     renderDetMode();
     $('formNew').value = ''; $('noteNew').value = '';
     formEditor.draw(); noteEditor.draw();
@@ -1597,8 +1632,8 @@
     var wrap = document.createElement('div');
     var row = document.createElement('div');
     row.className = 'add-row';
-    var inp = document.createElement('input');
-    inp.type = 'text';
+    var inp = document.createElement('textarea');
+    inp.rows = 1;
     inp.placeholder = '위치 직접 입력';
     inp.value = values.loc || '';
     row.appendChild(inp);
