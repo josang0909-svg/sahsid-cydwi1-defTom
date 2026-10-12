@@ -36,8 +36,13 @@
   #fileInput{display:none;}
   input,button,textarea{font-family:inherit;}
 
-  .screen{position:fixed;inset:0;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;z-index:30;}
-  .screen.show{display:block;}
+  /* 편집 화면: 제목줄은 고정하고 아래 내용만 스크롤 (맨 위에서 끌어내려도 제목줄이 따라 내려오지 않게) */
+  .screen{position:fixed;inset:0;background:var(--bg);overflow:hidden;display:none;z-index:30;flex-direction:column;}
+  .screen.show{display:flex;}
+  .screen > .scr-head{flex:none;}
+  .screen > .scr-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;width:100%;}
+  /* 스크롤 끝에서 고무줄처럼 늘어나는 효과 끄기 (iOS 16+) */
+  .screen > .scr-body, #home, .rail-list, .sheet-body, .home-main, .home-side{overscroll-behavior:none;}
   #home{display:block;z-index:10;position:fixed;inset:0;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;}
   #home.hide{display:none;}
 
@@ -328,7 +333,7 @@
     .scr-body.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:24px;align-items:start;}
     .scr-body.two > .full{grid-column:1 / -1;}
     .scr-body.two > .col > .sec:first-child{margin-top:0;}
-    .scr-body.two .sticky{position:sticky;top:64px;}
+    .scr-body.two .sticky{position:sticky;top:0;}
 
     /* 목록·위치 입력 창: 아래에서 올라오는 대신 오른쪽 패널 */
     .sheet{align-items:stretch;justify-content:flex-end;}
