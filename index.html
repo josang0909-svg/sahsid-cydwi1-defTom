@@ -112,6 +112,7 @@
   .lblrow input{flex:1;min-width:0;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:16px;user-select:text;}
   .lblrow input:focus{outline:none;border-color:var(--accent);}
 
+  .bcanvas{width:100%;max-width:420px;aspect-ratio:4/3;border-radius:6px;display:block;}
   .prev-wrap{background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;justify-content:center;}
   table.bprev{border-collapse:collapse;font-size:11.5px;}
   table.bprev td{border:1px solid #000;padding:4px 8px;line-height:1.35;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
@@ -417,8 +418,12 @@
    <div class="col">
     <div class="card">
       <div class="setrow"><span class="lab">배경</span><div class="chips" id="c_bg"></div></div>
-      <div class="setrow"><span class="lab">크기</span><div class="chips" id="c_size"></div></div>
+      <div class="setrow"><span class="lab">글자 크기</span><div class="chips" id="c_size"></div></div>
+      <div class="setrow"><span class="lab">줄 높이</span><div class="chips" id="c_rowH"></div></div>
+      <div class="setrow"><span class="lab">글자 굵기</span><div class="chips" id="c_wt"></div></div>
+      <div class="setrow"><span class="lab">항목명 정렬</span><div class="chips" id="c_align"></div></div>
       <div class="setrow"><span class="lab">위치</span><div class="chips" id="c_pos"></div></div>
+      <div class="setrow"><span class="lab">가장자리</span><div class="chips" id="c_mar"></div></div>
       <div class="setrow"><span class="lab">해상도</span><div class="chips" id="c_res"></div></div>
       <div class="setrow"><span class="lab">GPS 각인</span><input type="checkbox" id="gpsToggle"></div>
       <div class="setrow"><span class="lab">원본도 함께 저장</span><input type="checkbox" id="origToggle"></div>
@@ -437,7 +442,7 @@
    <div class="col sticky">
     <div class="sec">
       <div class="t">미리보기</div>
-      <div class="prev-wrap"><table class="bprev white" id="boardPrev"></table></div>
+      <div class="prev-wrap"><canvas id="boardPrev" class="bcanvas"></canvas></div>
     </div>
    </div>
   </div>
@@ -655,6 +660,7 @@
   /* ================= 상태 ================= */
   var SET_DEFAULT = {
     bg:'white', size:100, pos:'bl', res:2048, gps:false, saveOrig:true,
+    rowH:1.2, margin:0, align:'dist', weight:400,   // 기본값은 기존에 쓰던 보드판 앱과 같은 크기·비율
     labels:['일자','시설명','부재명','위치','내용']
   };
   var settings = load('bd_settings', SET_DEFAULT);
@@ -756,6 +762,7 @@
     ];
   }
   function fillPrev(table){
+    if(table.tagName === 'CANVAS') return drawBoardSample(table);
     table.className = table.className.replace(/\s*(white|trans)\b/g,'') + ' ' + (settings.bg === 'white' ? 'white' : 'trans');
     table.innerHTML = '';
     rowsData().forEach(function(r){
@@ -948,8 +955,12 @@
   /* ================= 보드판 설정 화면 ================= */
   var CHIPCFG = {
     c_bg:   { key:'bg',   items:[['white','흰색'],['trans','투명']] },
-    c_size: { key:'size', items:[[100,'100%'],[120,'120%'],[140,'140%'],[160,'160%']] },
+    c_size: { key:'size', items:[[70,'70%'],[80,'80%'],[90,'90%'],[100,'100%'],[115,'115%'],[130,'130%']] },
+    c_rowH: { key:'rowH', items:[[1.2,'딱 맞게'],[1.45,'보통'],[1.75,'넉넉히']] },
+    c_wt:   { key:'weight', items:[[400,'보통'],[700,'굵게']] },
+    c_align:{ key:'align', items:[['dist','양끝 배분'],['center','가운데']] },
     c_pos:  { key:'pos',  items:[['bl','좌하'],['tl','좌상'],['br','우하'],['tr','우상']] },
+    c_mar:  { key:'margin', items:[[0,'붙이기'],[1,'띄우기']] },
     c_res:  { key:'res',  items:[[0,'원본'],[3072,'3072'],[2048,'2048'],[1024,'1024']] }
   };
   function renderSetChips(){
@@ -988,6 +999,7 @@
   }
   function renderBoardScreen(){
     renderSetChips(); renderLabelBox(); fillPrev($('boardPrev'));
+    requestAnimationFrame(function(){ fillPrev($('boardPrev')); });   // 화면이 뜬 뒤 실제 폭으로 다시
     $('gpsToggle').checked = !!settings.gps;
     $('origToggle').checked = settings.saveOrig !== false;
   }
@@ -1587,18 +1599,39 @@
   }
 
   /* ================= 캔버스 보드판 ================= */
+  // 보드판 설정 화면 미리보기: 사진 대신 회색 바탕에 실제 각인과 똑같이 그린다
+  function drawBoardSample(cv){
+    var w = Math.round((cv.clientWidth || 360) * Math.min(2, window.devicePixelRatio || 1));
+    var W = 2000, H = 1500;
+    if(cv.width !== w){ cv.width = w; cv.height = Math.round(w * 3 / 4); }
+    var ctx = cv.getContext('2d'), k = cv.width / W;
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    var g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#8a939b'); g.addColorStop(1, '#4b5258');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    drawBoard(ctx, W, H);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
   function drawBoard(ctx, W, H){
-    var rows = rowsData();
+    var rows = rowsData(), rawLabels = settings.labels;
     var mult = settings.size / 100;
-    var fs = Math.max(11, Math.round(W * 0.019 * mult));
-    var padX = Math.round(fs * 0.55);
-    var rowH = Math.round(fs * 1.75);
+    var fs = Math.max(11, Math.round(W * 0.024 * mult));   // 100% = 기존 보드판 앱 글자 크기
+    var padX = Math.round(fs * 0.45);
+    var rowH = Math.round(fs * (settings.rowH || 1.2));     // 줄 높이: 글자 크기에 맞춤
     var boardH = rowH * rows.length;
-    var FONT = function(s){ return '700 ' + s + 'px -apple-system, "Apple SD Gothic Neo", sans-serif'; };
+    var weight = settings.weight || 400;
+    var FONT = function(s){ return weight + ' ' + s + 'px -apple-system, "Apple SD Gothic Neo", sans-serif'; };
+    var dist = settings.align !== 'center';
+    // 양끝 배분: 항목명 글자를 칸 폭에 고르게 벌린다 (한글 배분정렬처럼)
+    var labText = rows.map(function(r, i){ return dist ? (rawLabels[i] || '').replace(/\s/g, '') : r.label; });
 
     ctx.font = FONT(fs);
     var labW = 0;
-    rows.forEach(function(r){ labW = Math.max(labW, ctx.measureText(r.label).width); });
+    labText.forEach(function(t){
+      var w = ctx.measureText(t).width;
+      if(dist && t.length === 2) w = ctx.measureText(t + '가').width;   // 두 글자는 세 글자 폭만큼 벌림
+      labW = Math.max(labW, w);
+    });
     labW = Math.round(labW + padX*2);
 
     var valW = 0;
@@ -1609,7 +1642,8 @@
     var maxW = Math.round(W * 0.72);
     if(boardW > maxW){ valW = maxW - labW; boardW = labW + valW; }
 
-    var m = Math.round(W * 0.012);
+    var gm = Math.round(W * 0.012);
+    var m = settings.margin ? gm : 0;   // 붙이기: 사진 모서리에 딱 붙임
     var x, y;
     if(settings.pos === 'bl'){ x = m; y = H - boardH - m; }
     else if(settings.pos === 'tl'){ x = m; y = m; }
@@ -1636,8 +1670,18 @@
     rows.forEach(function(r, i){
       var cy = y + rowH*i + rowH/2;
       ctx.font = FONT(fs);
-      ctx.textAlign = 'center';
-      ctx.fillText(r.label, x + labW/2, cy);
+      var lt = labText[i];
+      if(dist && lt.length > 1){
+        // 첫 글자는 왼쪽 여백, 끝 글자는 오른쪽 여백에 맞추고 사이 글자는 고르게
+        ctx.textAlign = 'left';
+        var ws = lt.split('').map(function(c){ return ctx.measureText(c).width; });
+        var total = ws.reduce(function(a, b){ return a + b; }, 0);
+        var gap = (labW - padX*2 - total) / (lt.length - 1), lx = x + padX;
+        for(var j = 0; j < lt.length; j++){ ctx.fillText(lt[j], lx, cy); lx += ws[j] + gap; }
+      } else {
+        ctx.textAlign = 'center';
+        ctx.fillText(lt, x + labW/2, cy);
+      }
       ctx.textAlign = 'left';
       var v = r.value || '';
       if(v){
@@ -1655,8 +1699,8 @@
       var g2 = geo.alt != null ? '고도 ' + Math.round(geo.alt) + 'm' : '';
       var gw = Math.max(ctx.measureText(g1).width, ctx.measureText(g2).width) + gs*1.4;
       var gh = (g2 ? gs*2.6 : gs*1.8);
-      var gx = W - gw - m, gy = m;
-      if(settings.pos === 'tr'){ gy = H - gh - m; }
+      var gx = W - gw - gm, gy = gm;
+      if(settings.pos === 'tr'){ gy = H - gh - gm; }
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(gx, gy, gw, gh);
       ctx.fillStyle = '#cfe9df';
