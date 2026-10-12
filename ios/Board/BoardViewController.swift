@@ -62,7 +62,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, zoom: true, hwShutter: true, photos: true, flash: true };",
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, zoom: true, hwShutter: true, photos: true, flash: true, focus: true };",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
@@ -142,6 +142,11 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             captureMaxW = CGFloat(body["maxW"] as? Double ?? 0)
             capturePhoto()
         case "camFlash": flashOn = body["on"] as? Bool ?? false
+        case "camFocus":
+            if let x = body["x"] as? Double, let y = body["y"] as? Double {
+                focus(at: CGPoint(x: x, y: y), lock: body["lock"] as? Bool ?? false)
+            }
+        case "camBias": setBias(Float(body["bias"] as? Double ?? 0))
         case "openPhotos":
             if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
         case "camZoom":
@@ -167,6 +172,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 if !self.session.isRunning { self.session.startRunning() }
                 // 켤 때마다 기본 카메라처럼 1× 로 시작
                 self.applyZoom(self.zoomBase)
+                self.resetFocus()
                 let minD = Double((self.camDevice?.minAvailableVideoZoomFactor ?? 1) / self.zoomBase)
                 let maxD = Double(self.maxZoomFactor / self.zoomBase)
                 let presets = self.zoomPresets.map { String($0) }.joined(separator: ",")
@@ -191,6 +197,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: device) else { return }
         camDevice = device
+        NotificationCenter.default.addObserver(self, selector: #selector(subjectAreaChanged),
+                                               name: .AVCaptureDeviceSubjectAreaDidChange, object: device)
         let switchOver = device.virtualDeviceSwitchOverVideoZoomFactors.map { CGFloat($0.doubleValue) }
         let hasUltraWide = device.constituentDevices.contains { $0.deviceType == .builtInUltraWideCamera }
         zoomBase = hasUltraWide ? (switchOver.first ?? 2) : 1
@@ -212,6 +220,70 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             self.view.layer.insertSublayer(layer, at: 0)
             self.previewLayer = layer
             self.applyPreviewFrame()
+        }
+    }
+
+    // MARK: - 초점·밝기 (기본 카메라처럼: 누르면 그 자리 초점·노출, 길게 누르면 잠금, 위아래로 밝기)
+
+    private var focusLocked = false
+
+    /// 웹페이지 뷰파인더 안의 비율 좌표(0~1)를 받아 카메라 좌표로 바꿔 초점·노출을 맞춘다
+    private func focus(at rel: CGPoint, lock: Bool) {
+        DispatchQueue.main.async {
+            guard let layer = self.previewLayer else { return }
+            let p = CGPoint(x: rel.x * layer.bounds.width, y: rel.y * layer.bounds.height)
+            let devPoint = layer.captureDevicePointConverted(fromLayerPoint: p)
+            self.camQueue.async {
+                guard let d = self.camDevice, (try? d.lockForConfiguration()) != nil else { return }
+                if d.isFocusPointOfInterestSupported { d.focusPointOfInterest = devPoint }
+                if d.isExposurePointOfInterestSupported { d.exposurePointOfInterest = devPoint }
+                if d.isFocusModeSupported(.autoFocus) { d.focusMode = .autoFocus }
+                if d.isExposureModeSupported(.autoExpose) { d.exposureMode = .autoExpose }
+                d.setExposureTargetBias(0, completionHandler: nil)
+                d.isSubjectAreaChangeMonitoringEnabled = !lock
+                d.unlockForConfiguration()
+                self.focusLocked = lock
+                if lock {
+                    // 맞춘 뒤 잠근다 (AE/AF 잠금)
+                    self.camQueue.asyncAfter(deadline: .now() + 0.6) {
+                        guard self.focusLocked, (try? d.lockForConfiguration()) != nil else { return }
+                        if d.isFocusModeSupported(.locked) { d.focusMode = .locked }
+                        if d.isExposureModeSupported(.locked) { d.exposureMode = .locked }
+                        d.unlockForConfiguration()
+                    }
+                }
+            }
+        }
+    }
+
+    private func setBias(_ bias: Float) {
+        camQueue.async {
+            guard let d = self.camDevice, (try? d.lockForConfiguration()) != nil else { return }
+            d.setExposureTargetBias(max(d.minExposureTargetBias, min(d.maxExposureTargetBias, bias)), completionHandler: nil)
+            d.unlockForConfiguration()
+        }
+    }
+
+    /// 화면 가운데 자동 초점·자동 노출로 되돌린다
+    private func resetFocus() {
+        guard let d = camDevice, (try? d.lockForConfiguration()) != nil else { return }
+        let center = CGPoint(x: 0.5, y: 0.5)
+        if d.isFocusPointOfInterestSupported { d.focusPointOfInterest = center }
+        if d.isExposurePointOfInterestSupported { d.exposurePointOfInterest = center }
+        if d.isFocusModeSupported(.continuousAutoFocus) { d.focusMode = .continuousAutoFocus }
+        if d.isExposureModeSupported(.continuousAutoExposure) { d.exposureMode = .continuousAutoExposure }
+        d.setExposureTargetBias(0, completionHandler: nil)
+        d.isSubjectAreaChangeMonitoringEnabled = false
+        d.unlockForConfiguration()
+        focusLocked = false
+    }
+
+    /// 누른 자리 초점 후 장면이 크게 바뀌면 기본 카메라처럼 자동으로 돌아간다 (잠금 중이면 그대로)
+    @objc private func subjectAreaChanged() {
+        camQueue.async {
+            guard !self.focusLocked else { return }
+            self.resetFocus()
+            self.js("window.__camFocusReset && window.__camFocusReset()")
         }
     }
 
