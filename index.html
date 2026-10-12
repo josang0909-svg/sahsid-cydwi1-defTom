@@ -276,16 +276,19 @@
 
   /* 위치 입력 */
   .seg{
-    display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:16px 12px;background:var(--field);
+    display:flex;align-items:center;flex-wrap:nowrap;overflow:hidden;gap:4px;padding:16px 12px;background:var(--field);
     border:1px solid var(--line);border-radius:11px;margin-bottom:12px;
   }
-  .seg .txt{font-size:22px;font-weight:800;letter-spacing:.02em;}
+  .chips.one-line{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .chips.one-line::-webkit-scrollbar{display:none;}
+  .chips.one-line .chip{flex:none;padding-left:10px;padding-right:10px;}
+  .seg .txt{font-size:calc(22px * var(--sk, 1));font-weight:800;letter-spacing:.02em;white-space:nowrap;flex:none;}
   .seg input{
     width:64px;padding:10px 6px;font-size:22px;font-weight:800;text-align:center;
     border:2px solid var(--accent);border-radius:9px;background:var(--card);color:var(--text);user-select:text;
   }
   .seg input:focus{outline:none;background:var(--card-2);}
-  .seg .slot{min-width:58px;padding:10px 8px;font-size:24px;font-weight:800;text-align:center;
+  .seg .slot{flex:none;min-width:calc(58px * var(--sk, 1));padding:10px calc(8px * var(--sk, 1));font-size:calc(24px * var(--sk, 1));font-weight:800;text-align:center;
     border:2px solid var(--line);border-radius:9px;background:var(--card);color:var(--text);}
   .seg .slot.cur{border-color:var(--accent);background:var(--card-2);}
   .seg .slot.fresh{color:var(--muted);}
@@ -314,8 +317,7 @@
   .home-main,.home-side{padding:0 calc(16px + var(--sr)) 0 calc(16px + var(--sl));}
   .home-main{padding-top:calc(18px + var(--st));}
   .home-side{padding-bottom:calc(30px + var(--sb));}
-  .home-id h1{margin:8px 0 2px;font-size:22px;font-weight:800;letter-spacing:-0.02em;}
-  .home-id p{margin:0;font-size:12.5px;color:var(--muted);}
+  .mark.big{font-size:22px;letter-spacing:5px;padding:4px 10px;border-radius:5px;font-weight:700;}
   .home-main .shoot-btn{width:100%;justify-content:center;margin-top:18px;padding:17px;font-size:17px;border-radius:12px;}
   .home-main > *,.home-side > *{zoom:var(--zoom);}
 
@@ -324,10 +326,11 @@
     .home-wrap{flex-direction:row;height:100%;}
     .home-main,.home-side{flex:1 1 0;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
       padding-top:calc(16px + var(--st));padding-bottom:calc(24px + var(--sb));}
-    .home-main{padding-right:20px;display:flex;flex-direction:column;}
-    .home-side{padding-left:20px;border-left:1px solid var(--line);}
+    /* 설정·미리보기는 왼쪽, 시설물 선택·촬영 시작은 오른쪽 */
+    .home-main{padding-left:20px;display:flex;flex-direction:column;}
+    .home-side{order:-1;padding-right:20px;border-right:1px solid var(--line);}
     .home-side > .sec:first-child{margin-top:4px;}
-    /* 홈 오른쪽: 설정 항목은 '시설명' 글씨 크기로 낮게, 미리보기까지 스크롤 없이 한 화면에 */
+    /* 홈 설정 칸: 설정 항목은 '시설명' 글씨 크기로 낮게, 미리보기까지 스크롤 없이 한 화면에 */
     .home-side .nav-row{padding:9px 14px;}
     .home-side .nav-row .nt{font-size:12.5px;}
     .home-side > .sec + .sec{margin-top:12px;}
@@ -378,9 +381,7 @@
   <div class="home-wrap">
     <section class="home-main">
       <div class="home-id">
-        <span class="mark">SITE·BOARD</span>
-        <h1>현장 보드판</h1>
-        <p id="homeSub">시설물을 선택하세요</p>
+        <span class="mark big">SITE·BOARD</span>
       </div>
 
       <div class="sec">
@@ -961,7 +962,6 @@
   function updateShootBtn(){
     var ok = !!(values.cat && (values.site || '').trim());
     $('shootBtn').disabled = !ok;
-    $('homeSub').textContent = ok ? (values.cat + ' · ' + values.site) : '시설물명을 입력하면 촬영할 수 있습니다';
   }
   function renderHome(){
     renderCatChips();
@@ -1442,7 +1442,7 @@
     if(m.locMode === 'form' && m.forms.length){
       if(m.forms.length > 1){
         var fc = document.createElement('div');
-        fc.className = 'chips';
+        fc.className = 'chips one-line';   // 양식 고르기는 한 줄 (넘치면 옆으로 밀어서)
         fc.style.marginBottom = '14px';
         m.forms.forEach(function(f, i){
           var b = document.createElement('button');
@@ -1554,8 +1554,17 @@
       });
       prev.innerHTML = '입력 결과 &nbsp; <b>' + build() + '</b>';
       pad.nextBtn.textContent = cur < n - 1 ? '다음 ›' : '확인';
+      fitSeg();
+    }
+    // 양식 칸은 한 줄로: 넘치면 글씨·칸을 같이 줄인다
+    function fitSeg(){
+      if(!seg.isConnected || !seg.clientWidth) return;
+      var k = 1;
+      seg.style.setProperty('--sk', k);
+      while(seg.scrollWidth > seg.clientWidth + 1 && k > 0.5){ k -= 0.05; seg.style.setProperty('--sk', k); }
     }
     draw();
+    requestAnimationFrame(fitSeg);
 
     // 순서대로 다니며 찍을 때: 지금 칸 번호를 하나씩 올리고 내린다
     var step = document.createElement('div');
