@@ -745,7 +745,7 @@
   function pad2(n){ return String(n).padStart(2,'0'); }
   function todayStr(){
     var d = shotTime || new Date();
-    return d.getFullYear() + '.' + pad2(d.getMonth()+1) + '.' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    return d.getFullYear() + '.' + pad2(d.getMonth()+1) + '.' + pad2(d.getDate());   // 보드판엔 날짜만, 시각은 EXIF에
   }
   function spaced(s){
     var t = (s||'').replace(/\s/g,'');
@@ -1307,11 +1307,11 @@
     if(!$('cam').classList.contains('show') || document.hidden) return;
     if(window.scrollX || window.scrollY) window.scrollTo(0, 0);
     layoutFrame('check');
-    // 보드판 일자 칸의 시각(분)이 바뀌면 다시 그린다
-    var m = new Date().getMinutes();
-    if(m !== shownMinute){ shownMinute = m; drawCamBoard(); }
+    // 자정이 지나 날짜가 바뀌면 보드판을 다시 그린다
+    var day = new Date().getDate();
+    if(day !== shownDay){ shownDay = day; drawCamBoard(); }
   }, 700);
-  var shownMinute = -1;
+  var shownDay = -1;
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize', function(){ setTimeout(layoutFrame, 60); });
     window.visualViewport.addEventListener('scroll', function(){ setTimeout(layoutFrame, 60); });
