@@ -27,6 +27,8 @@
     --r-btn:9px; --cam-gap:6px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  /* iOS는 가로 화면에서 글씨를 제멋대로 키워 화면마다 크기가 달라진다 → 끈다 */
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
   html,body{
     margin:0;padding:0;background:var(--bg);color:var(--text);height:100%;overflow:hidden;
     font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo",sans-serif;
@@ -88,7 +90,7 @@
   .nav-row{display:flex;align-items:center;gap:10px;width:100%;padding:16px 14px;background:transparent;border:none;border-bottom:1px solid var(--line);color:var(--text);text-align:left;}
   .nav-row:last-child{border-bottom:none;}
   .nav-row:active{background:rgba(255,255,255,0.05);}
-  .nav-row .nt{flex:1;min-width:0;font-size:14.5px;font-weight:600;}
+  .nav-row .nt{flex:1;min-width:0;font-size:16px;font-weight:600;}
   .nav-row .nv{font-size:12.5px;color:var(--muted);max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .nav-row .ar{color:var(--muted);font-size:15px;}
 
@@ -128,8 +130,8 @@
   .opt.on{background:rgba(182,146,123,0.14);}
   .opt.dragging{background:var(--card-2);}
   .opt .dh{width:36px;height:42px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;touch-action:none;}
-  .opt .lbl{flex:1;min-width:0;font-size:15px;padding:12px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .opt .lbl small{display:block;font-size:11px;color:var(--muted);margin-top:2px;}
+  .opt .lbl{flex:1;min-width:0;font-size:16px;padding:12px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .opt .lbl small{display:block;font-size:12px;color:var(--muted);margin-top:2px;}
   .opt .act{flex:none;padding:8px 8px;font-size:12.5px;background:none;border:none;color:var(--muted);font-weight:600;}
   .opt .act.edit{color:var(--accent);}
   .opt .act.del{color:var(--danger);}
@@ -156,6 +158,8 @@
   .cam-back{width:34px;height:34px;flex:none;border-radius:9px;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:17px;padding:0;}
   .cam-title{flex:1;min-width:0;line-height:1.3;}
   .cam-title b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:13px;font-weight:800;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere;}
+  .cam-title{cursor:pointer;}
+  .cam-title b::after{content:' ▾';color:var(--accent);font-size:11px;}
   .cam-title span{display:block;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   #ovGps{flex:none;font-size:10px;color:var(--accent);line-height:1.35;white-space:pre-line;font-family:"Courier New",monospace;}
   #ovGps:empty{display:none;}
@@ -163,18 +167,29 @@
     display:flex;flex-direction:column;gap:var(--cam-gap);padding-bottom:2px;}
   .rail-list::-webkit-scrollbar{display:none;}
   .comp-btn,.dmg-btn{flex:none;width:100%;border-radius:var(--r-btn);border:1px solid var(--line);background:var(--card);
-    color:var(--text);font-weight:700;text-align:left;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere;
+    color:var(--text);font-weight:700;text-align:center;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere;
     overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;}
   .comp-btn{padding:var(--side-pad) 10px;font-size:var(--side-fs);}
   .dmg-btn{padding:var(--dmg-pad) 10px;font-size:var(--dmg-fs);}
   .comp-btn:active,.dmg-btn:active{background:var(--card-2);}
   .comp-btn.active,.dmg-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
-  .dmg-btn.other{background:transparent;border-style:dashed;color:var(--accent);text-align:center;}
+  .dmg-btn.other,.comp-btn.other{background:transparent;border-style:dashed;color:var(--accent);text-align:center;}
   .loc-btn{flex:none;display:flex;flex-direction:column;gap:1px;width:100%;padding:8px 10px;border-radius:var(--r-btn);
     border:1px solid var(--accent-dim);background:var(--card);color:var(--text);text-align:left;}
   .loc-btn small{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.1em;}
   .loc-btn span{font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .shot-box{flex:none;display:flex;justify-content:center;padding-top:6px;}
+  .shot-box{flex:none;display:flex;justify-content:center;align-items:center;gap:10px;padding-top:6px;position:relative;}
+  .photos-btn{display:none;width:44px;height:44px;flex:none;border-radius:9px;border:1px solid var(--line);
+    background:var(--card) center/cover no-repeat;padding:0;color:var(--muted);font-size:10px;font-weight:700;}
+  html.has-photos .photos-btn{display:block;}
+  html.has-photos .shot-box{justify-content:space-between;}
+  /* 플래시 */
+  .flash-btn{position:absolute;top:8px;right:8px;z-index:4;display:none;width:40px;height:40px;border-radius:50%;
+    border:none;padding:0;background:rgba(0,0,0,0.45);color:#fff;align-items:center;justify-content:center;}
+  .flash-btn.left{right:auto;left:8px;}
+  #cam.live .flash-btn.on{display:flex;}
+  .flash-btn svg{width:20px;height:20px;}
+  .flash-btn.lit{color:#f2c94c;}
   .capture-btn{width:var(--shutter);height:var(--shutter);border-radius:50%;background:#fff;padding:0;
     border:5px solid var(--card-2);box-shadow:0 0 0 2px var(--line);display:flex;align-items:center;justify-content:center;}
   .capture-btn:active{transform:scale(0.93);}
@@ -202,7 +217,7 @@
   #camFrame{touch-action:none;}
   #camVideo{transform-origin:50% 50%;}
   .zoom-ctl{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:4;display:none;
-    flex-direction:column;align-items:center;gap:6px;padding:6px 4px;border-radius:24px;
+    flex-direction:column-reverse;align-items:center;gap:6px;padding:6px 4px;border-radius:24px;
     background:rgba(0,0,0,0.38);touch-action:none;user-select:none;-webkit-user-select:none;}
   #cam.live .zoom-ctl.on{display:flex;}
   .zoom-ctl button{width:36px;height:36px;border-radius:50%;border:none;padding:0;background:rgba(0,0,0,0.45);
@@ -248,6 +263,19 @@
     border:2px solid var(--accent);border-radius:9px;background:var(--card);color:var(--text);user-select:text;
   }
   .seg input:focus{outline:none;background:var(--card-2);}
+  .seg .slot{min-width:58px;padding:10px 8px;font-size:24px;font-weight:800;text-align:center;
+    border:2px solid var(--line);border-radius:9px;background:var(--card);color:var(--text);}
+  .seg .slot.cur{border-color:var(--accent);background:var(--card-2);}
+  .seg .slot.fresh{color:var(--muted);}
+  .seg .slot:empty::before{content:'?';color:var(--accent-dim);}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+  .keypad button{padding:0;height:54px;border-radius:11px;border:1px solid var(--line);background:var(--card-2);
+    color:var(--text);font-size:23px;font-weight:700;}
+  .keypad button:active{background:var(--line);}
+  .keypad .k-fn{font-size:15px;color:var(--muted);}
+  .keypad.step{grid-template-columns:1fr 1fr;}
+  .keypad.step button{font-size:18px;color:var(--accent);}
+  .keypad .k-next{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-size:16px;}
   .locprev{font-size:13px;color:var(--muted);margin-bottom:12px;text-align:center;}
   .locprev b{color:var(--text);font-size:17px;}
   .big-btn{width:100%;padding:16px;border-radius:11px;border:none;background:var(--accent);color:var(--on-accent);font-size:16px;font-weight:800;}
@@ -298,6 +326,13 @@
     .modal-actions{flex-direction:column;justify-content:flex-end;width:var(--dmg-w);min-width:140px;padding:14px 10px;}
     .modal-actions button{flex:none;padding:20px 8px;}
     .modal-actions .btn-save{padding:30px 8px;font-size:17px;}
+    #locSheet .sheet-inner{width:min(780px, 88vw);}
+    .loc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start;}
+    .loc-grid .keypad button{height:50px;}
+    .modal.aligned{display:none;padding:0;}
+    .modal.aligned.show{display:block;}
+    .modal.aligned img{position:absolute;height:auto;object-fit:contain;}
+    .modal.aligned .modal-actions{position:absolute;min-width:0;}
   }
   .scr-body{max-width:960px;margin-left:auto;margin-right:auto;}
 </style>
@@ -500,6 +535,7 @@
       <canvas id="camBoard"></canvas>
       <canvas id="zoomRuler" width="0" height="0"></canvas>
       <div class="zoom-ctl" id="zoomCtl"></div>
+      <button class="flash-btn" id="flashBtn" type="button" aria-label="플래시"></button>
       <div class="frame-hint" id="frameHint">카메라를 켜는 중입니다<br>촬영 버튼을 누르면 기본 카메라로 찍을 수 있습니다</div>
     </div>
   </div>
@@ -508,7 +544,7 @@
     <button class="loc-btn" id="qLoc"><small>위치</small><span>-</span></button>
     <div class="rail-t">손상</div>
     <div class="rail-list" id="bottomBar"></div>
-    <div class="shot-box"><button class="capture-btn" id="captureBtn"><span class="dot"></span></button></div>
+    <div class="shot-box"><button class="photos-btn" id="photosBtn" type="button" aria-label="사진 앱"></button><button class="capture-btn" id="captureBtn"><span class="dot"></span></button></div>
   </aside>
 </div>
 
@@ -526,7 +562,10 @@
 <div class="sheet" id="noteSheet">
   <div class="sheet-inner">
     <div class="sheet-head"><h3 id="nsTitle">손상 목록</h3><button data-closesheet="noteSheet">닫기</button></div>
-    <div class="sheet-body"><div class="editor" id="nsBody"></div></div>
+    <div class="sheet-body">
+      <div class="add-row"><input type="text" id="nsNew" placeholder="새 손상 항목 입력"><button id="nsAdd">추가</button></div>
+      <div class="editor" id="nsBody"></div>
+    </div>
   </div>
 </div>
 
@@ -1155,7 +1194,14 @@
       });
       box.appendChild(b);
     });
+    var more = document.createElement('button');
+    more.className = 'comp-btn other';
+    more.textContent = '＋ 부재 편집';
+    more.addEventListener('click', openMembersScreen);
+    box.appendChild(more);
   }
+  // 촬영 화면에서 시설명을 누르면 다른 시설명으로 바꾸거나 새로 추가
+  document.querySelector('#cam .cam-title').addEventListener('click', function(){ openListScreen('site'); });
 
   function renderBottom(){
     var box = $('bottomBar');
@@ -1239,7 +1285,16 @@
     rename: function(x, v, i){ noteHolder().arr[i] = v; if(values.note === x){ values.note = v; saveValues(); } },
     persist: saveTree
   });
+  $('nsAdd').addEventListener('click', function(){
+    var v = $('nsNew').value.trim();
+    if(!v) return;
+    var arr = noteHolder().arr;
+    if(arr.indexOf(v) < 0) arr.push(v);
+    saveTree(); $('nsNew').value = '';
+    nsEditor.draw(); refreshAll();
+  });
   function openNoteSheet(){
+    $('nsNew').value = '';
     $('nsTitle').textContent = noteHolder().name + ' 손상 목록';
     nsEditor.draw();
     $('noteSheet').classList.add('show');
@@ -1259,13 +1314,17 @@
 
   function renderLocSheet(){
     var m = curMember();
-    var body = $('lsBody');
-    body.innerHTML = '';
+    var sheetBody = $('lsBody');
+    sheetBody.innerHTML = '';
+    sheetBody.classList.remove('loc-grid');
 
     if(!m){
-      body.appendChild(freeInputBlock(null));
+      sheetBody.appendChild(freeInputBlock(null));
       return;
     }
+    // 가로 화면에서는 키패드를 오른쪽 칸에 두어 스크롤 없이 한 화면에
+    var body = document.createElement('div'), right = document.createElement('div');
+    sheetBody.appendChild(body); sheetBody.appendChild(right);
 
     // 방식 전환
     var modeRow = document.createElement('div');
@@ -1296,7 +1355,8 @@
         });
         body.appendChild(fc);
       }
-      body.appendChild(formInputBlock(m, m.forms[locFormIdx] || m.forms[0]));
+      body.appendChild(formInputBlock(m, m.forms[locFormIdx] || m.forms[0], right));
+      sheetBody.classList.add('loc-grid');
     } else {
       body.appendChild(freeInputBlock(m));
     }
@@ -1322,34 +1382,31 @@
     }
   }
 
-  function formInputBlock(m, pattern){
+  /* 양식 위치 입력: 휴대폰 키보드 대신 화면 키패드로 빠르게.
+     지난번 위치가 같은 양식이면 숫자를 미리 채워 두고, 바꿀 칸만 눌러 새로 치면 된다.
+     칸은 [다음] 또는 칸을 눌러 이동, 마지막 칸에서 [확인]. */
+  function formInputBlock(m, pattern, right){
     var wrap = document.createElement('div');
     var parts = pattern.split('?');
+    var n = parts.length - 1;
+    var vals = [], fresh = [], cur = 0;
+
+    // 지난 위치가 이 양식과 맞으면 숫자를 가져온다
+    var re = new RegExp('^' + parts.map(function(p){ return p.replace(/[.*+^${}()|[\]\\]/g, '\\$&'); }).join('(\\d+)') + '$');
+    var prevLoc = (values.loc && re.exec(values.loc)) || ((m.recent || []).map(function(r){ return re.exec(r); }).filter(Boolean)[0]);
+    for(var i = 0; i < n; i++){ vals.push(prevLoc ? prevLoc[i + 1] : ''); fresh.push(!!prevLoc); }
+    cur = prevLoc ? n - 1 : 0;   // 보통 마지막 번호만 바뀐다
+
     var seg = document.createElement('div');
     seg.className = 'seg';
-    var inputs = [];
-
+    var slots = [];
     parts.forEach(function(p, i){
-      if(p){
-        var s = document.createElement('span');
-        s.className = 'txt'; s.textContent = p;
-        seg.appendChild(s);
-      }
-      if(i < parts.length - 1){
-        var inp = document.createElement('input');
-        inp.type = 'tel';
-        inp.setAttribute('inputmode','numeric');
-        inp.setAttribute('pattern','[0-9]*');
-        inp.addEventListener('input', function(){
-          inp.value = inp.value.replace(/[^0-9]/g,'');
-          updatePrev();
-          if(inp.value.length >= 2){
-            var n = inputs[inputs.indexOf(inp)+1];
-            if(n) n.focus();
-          }
-        });
-        seg.appendChild(inp);
-        inputs.push(inp);
+      if(p){ var t = document.createElement('span'); t.className = 'txt'; t.textContent = p; seg.appendChild(t); }
+      if(i < n){
+        var sl = document.createElement('button');
+        sl.type = 'button'; sl.className = 'slot';
+        sl.addEventListener('click', function(){ cur = i; fresh[i] = true; draw(); });
+        seg.appendChild(sl); slots.push(sl);
       }
     });
     wrap.appendChild(seg);
@@ -1358,30 +1415,63 @@
     prev.className = 'locprev';
     wrap.appendChild(prev);
 
+    var pad = document.createElement('div');
+    pad.className = 'keypad';
+    ['1','2','3','4','5','6','7','8','9','del','0','next'].forEach(function(k){
+      var b = document.createElement('button');
+      b.type = 'button';
+      if(k === 'del'){ b.className = 'k-fn'; b.textContent = '⌫'; }
+      else if(k === 'next'){ b.className = 'k-next'; }
+      else b.textContent = k;
+      b.addEventListener('click', function(){ press(k); });
+      pad.appendChild(b);
+      if(k === 'next') pad.nextBtn = b;
+    });
+    right.appendChild(pad);
+
     function build(){
       var out = '';
-      parts.forEach(function(p, i){
-        out += p;
-        if(i < parts.length - 1) out += (inputs[i].value || '_');
-      });
+      parts.forEach(function(p, i){ out += p; if(i < n) out += (vals[i] || '_'); });
       return out;
     }
-    function updatePrev(){
-      prev.innerHTML = '입력 결과 &nbsp; <b>' + build() + '</b>';
-    }
-    updatePrev();
-
-    var ok = document.createElement('button');
-    ok.className = 'big-btn';
-    ok.textContent = '확인';
-    ok.addEventListener('click', function(){
-      var missing = inputs.some(function(i){ return !i.value; });
-      if(missing){ showToast('숫자를 모두 입력하세요'); return; }
+    function done(){
+      if(vals.some(function(v){ return !v; })){ showToast('숫자를 모두 입력하세요'); cur = vals.indexOf(''); draw(); return; }
       applyLoc(m, build());
-    });
-    wrap.appendChild(ok);
+    }
+    function press(k){
+      if(k === 'next'){
+        if(cur < n - 1){ cur++; fresh[cur] = true; draw(); } else done();
+        return;
+      }
+      if(k === 'del'){ vals[cur] = fresh[cur] ? '' : vals[cur].slice(0, -1); fresh[cur] = false; draw(); return; }
+      vals[cur] = fresh[cur] ? k : (vals[cur] + k).slice(0, 4);
+      fresh[cur] = false;
+      draw();
+    }
+    function draw(){
+      slots.forEach(function(sl, i){
+        sl.textContent = vals[i];
+        sl.classList.toggle('cur', i === cur);
+        sl.classList.toggle('fresh', fresh[i] && !!vals[i]);
+      });
+      prev.innerHTML = '입력 결과 &nbsp; <b>' + build() + '</b>';
+      pad.nextBtn.textContent = cur < n - 1 ? '다음 ›' : '확인';
+    }
+    draw();
 
-    setTimeout(function(){ if(inputs[0]) inputs[0].focus(); }, 120);
+    // 순서대로 다니며 찍을 때: 지금 칸 번호를 하나씩 올리고 내린다
+    var step = document.createElement('div');
+    step.className = 'keypad step';
+    [['−1', -1], ['+1', 1]].forEach(function(d){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = d[0];
+      b.addEventListener('click', function(){
+        var v = Math.max(0, (parseInt(vals[cur], 10) || 0) + d[1]);
+        vals[cur] = String(v); fresh[cur] = true; draw();
+      });
+      step.appendChild(b);
+    });
+    right.appendChild(step);
     return wrap;
   }
 
@@ -1490,7 +1580,8 @@
       ctx.textAlign = 'left';
       var v = r.value || '';
       if(v){
-        var avail = valW - padX*2;
+        var avail = valW - padX*2, vfs = fs;
+        while(ctx.measureText(v).width > avail && vfs > fs * 0.6){ vfs -= 0.5; ctx.font = FONT(vfs); }
         while(ctx.measureText(v).width > avail && v.length > 1) v = v.slice(0, -1);
         ctx.fillText(v, x + labW + padX, cy);
       }
@@ -1557,7 +1648,7 @@
       c.font = '600 10px -apple-system,sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
       for(var v = Math.ceil(min * 10) / 10; v <= max + 1e-6; v += (v < 2 ? 0.1 : v < 10 ? 0.5 : 1)){
         v = Math.round(v * 10) / 10;
-        var y = mid + (Math.log(v) / Math.LN2 - lz) * PX;
+        var y = mid - (Math.log(v) / Math.LN2 - lz) * PX;
         if(y < 6 || y > h - 6) continue;
         var major = presets.some(function(p){ return Math.abs(p - v) < 0.01; }) || v === 5 || v === 10;
         c.fillStyle = major ? '#fff' : 'rgba(255,255,255,0.5)';
@@ -1647,6 +1738,45 @@
     return { setup: setup, reset: reset, get: function(){ return z; } };
   })();
 
+  /* ================= 플래시 =================
+     아이폰 앱: 찍는 순간 플래시. 웹: 손전등을 켜 둔다(지원하는 카메라만). 켬/끔은 이 기기에 기억 */
+  var Flash = (function(){
+    var btn = $('flashBtn'), on = false, apply = null;
+    try{ on = localStorage.getItem('bd_flash') === '1'; }catch(e){}
+    var BOLT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>';
+    var BOLT_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/><path d="M3 3l18 18" stroke-linecap="round"/></svg>';
+    function render(){
+      btn.innerHTML = on ? BOLT : BOLT_OFF;
+      btn.classList.toggle('lit', on);
+      btn.classList.toggle('left', settings.pos === 'tr');
+    }
+    btn.addEventListener('click', function(){
+      on = !on;
+      try{ localStorage.setItem('bd_flash', on ? '1' : '0'); }catch(e){}
+      render();
+      if(apply) apply(on);
+      showToast(on ? '플래시 켬' : '플래시 끔');
+    });
+    window.__camFlash = function(ok){
+      setup(!!ok, function(v){ window.webkit.messageHandlers.board.postMessage({ type:'camFlash', on: v }); });
+    };
+    function setup(ok, fn){
+      apply = ok ? fn : null;
+      btn.classList.toggle('on', ok);
+      render();
+      if(apply) apply(on);
+    }
+    function reset(){ apply = null; btn.classList.remove('on'); }
+    return { setup: setup, reset: reset };
+  })();
+
+  /* 사진 앱 바로가기 (아이폰 앱). 버튼에는 마지막으로 저장한 사진이 작게 보인다 */
+  if(nativeApp && window.__boardApp && window.__boardApp.photos) document.documentElement.classList.add('has-photos');
+  $('photosBtn').addEventListener('click', function(){
+    window.webkit.messageHandlers.board.postMessage({ type:'openPhotos' });
+  });
+  var lastThumb = null;
+
   var Cam = (function(){
     var video = $('camVideo'), stream = null, track = null, live = false, pending = null;
     function post(t){ window.webkit.messageHandlers.board.postMessage({ type:t }); }
@@ -1663,9 +1793,13 @@
       layoutFrame();
       if(!ok) showToast('카메라를 켜지 못해 기본 카메라로 찍습니다');
     };
-    window.__camShot = function(url){
+    window.__camShot = function(url, nativeOrig){
       var cb = pending; pending = null;
-      if(cb) cb(url ? dataUrlToBlob(url) : null);
+      if(!cb) return;
+      if(!url) return cb(null);
+      // 1.0.15+ 앱: 저장용 크기로 줄인 사진(문자열 그대로 그림에 사용), 원본은 앱이 저장할 때 붙인다
+      if(nativeOrig) return cb({ url: url, nativeOrig: true });
+      cb(dataUrlToBlob(url));
     };
     function dataUrlToBlob(url){
       var bin = atob(url.slice(url.indexOf(',') + 1)), arr = new Uint8Array(bin.length);
@@ -1695,6 +1829,7 @@
           stream = s; track = s.getVideoTracks()[0];
           video.srcObject = s;
           setupWebZoom();
+          setupWebFlash();
           var p = video.play(); if(p && p.catch) p.catch(function(){});
           setLive(true);
         })
@@ -1702,6 +1837,13 @@
     }
     // 카메라가 줌을 지원하면(안드로이드 크롬 등) 그 기능을, 아니면 화면 확대 후 가운데를 잘라 찍는다
     var digital = 1;
+    function setupWebFlash(){
+      var caps = null;
+      try{ caps = track.getCapabilities && track.getCapabilities(); }catch(e){}
+      Flash.setup(!!(caps && caps.torch), function(on){
+        try{ track.applyConstraints({ advanced:[{ torch: on }] }).catch(function(){}); }catch(e){}
+      });
+    }
     function setupWebZoom(){
       var caps = null;
       try{ caps = track.getCapabilities && track.getCapabilities(); }catch(e){}
@@ -1719,6 +1861,7 @@
     }
     function stop(){
       Zoom.reset();
+      Flash.reset();
       digital = 1; video.style.transform = '';
       if(nativeApp) post('camStop');
       if(stream){ stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; track = null; video.srcObject = null; }
@@ -1727,7 +1870,11 @@
     // cb(사진 Blob 또는 실패 시 null)
     function capture(cb){
       if(!live) return cb(null);
-      if(nativeApp){ pending = cb; post('camCapture'); return; }
+      if(nativeApp){
+        pending = cb;
+        window.webkit.messageHandlers.board.postMessage({ type:'camCapture', maxW: settings.res || 0 });
+        return;
+      }
       function grab(){
         if(!video.videoWidth) return cb(null);
         var vw = video.videoWidth, vh = video.videoHeight, sw = Math.round(vw / digital), sh = Math.round(vh / digital);
@@ -1763,10 +1910,11 @@
     shooting = true;
     $('cam').classList.add('flash');
     setTimeout(function(){ $('cam').classList.remove('flash'); }, 120);
-    Cam.capture(function(blob){
+    Cam.capture(function(shot){
       shooting = false;
-      if(!blob){ showToast('촬영 실패'); return; }
-      handlePhoto(blob);
+      if(!shot){ showToast('촬영 실패'); return; }
+      if(shot.nativeOrig){ pendingOrig = 'native'; return loadAndProcess(shot.url); }
+      handlePhoto(shot);
     });
   });
 
@@ -1799,14 +1947,14 @@
 
   function handlePhoto(file){
     pendingOrig = new File([file], '원본_' + stamp() + '.jpg', {type: file.type || 'image/jpeg'});
-    var img = new Image(), reader = new FileReader();
-    reader.onload = function(ev){
-      img.onload = function(){ processCaptured(img); };
-      img.onerror = function(){ showToast('사진을 불러오지 못했습니다'); };
-      img.src = ev.target.result;
-    };
-    reader.onerror = function(){ showToast('파일 읽기 실패'); };
-    reader.readAsDataURL(file);
+    var url = URL.createObjectURL(file);
+    loadAndProcess(url, function(){ URL.revokeObjectURL(url); });
+  }
+  function loadAndProcess(src, after){
+    var img = new Image();
+    img.onload = function(){ img.onload = img.onerror = null; processCaptured(img); img.src = ''; if(after) after(); };
+    img.onerror = function(){ showToast('사진을 불러오지 못했습니다'); if(after) after(); };
+    img.src = src;
   }
 
   function stamp(){
@@ -1824,20 +1972,49 @@
     ctx.drawImage(img, 0, 0, W, H);
     drawBoard(ctx, W, H);
 
-    pendingDataUrl = workCanvas.toDataURL('image/jpeg', 0.92);
-    $('previewImg').src = pendingDataUrl;
+    // 사진 앱 버튼에 쓸 작은 미리보기
+    var tc = document.createElement('canvas'); tc.width = 120; tc.height = Math.round(120 * H / W);
+    tc.getContext('2d').drawImage(workCanvas, 0, 0, tc.width, tc.height);
+    lastThumb = tc.toDataURL('image/jpeg', 0.7);
+
     // 아이폰 앱·안드로이드는 [사진 사용]을 누르면 바로 저장되므로 안내 없음
     $('saveHint').textContent = (isAndroid || nativeApp) ? ''
       : '[사진 사용]을 누르면 공유 창이 열립니다. "이미지 저장"을 선택하세요.';
-    $('previewModal').classList.add('show');
-
+    pendingStamped = null; pendingDataUrl = null;
+    // 큰 dataURL 문자열을 만들지 않고 Blob 하나로 미리보기·저장을 같이 한다 (오래 써도 메모리가 쌓이지 않게)
     workCanvas.toBlob(function(blob){
-      if(blob) pendingStamped = new File([blob], '각인_' + stamp() + '.jpg', {type:'image/jpeg'});
+      if(!blob){ showToast('사진 처리 실패'); return; }
+      pendingStamped = new File([blob], '각인_' + stamp() + '.jpg', {type:'image/jpeg'});
+      setPreview(URL.createObjectURL(blob));
+      alignPreview();
+      $('previewModal').classList.add('show');
     }, 'image/jpeg', 0.92);
+  }
+  var previewUrl = null;
+  function setPreview(url){
+    if(previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = url;
+    $('previewImg').src = url || '';
+  }
+  // 가로 화면에서는 결과 사진을 카메라 화면과 같은 자리에, 버튼은 오른쪽 칸(셔터 자리)에 둔다
+  function alignPreview(){
+    var md = $('previewModal'), img = $('previewImg'), act = md.querySelector('.modal-actions');
+    var rail = document.querySelector('#cam .rail-r').getBoundingClientRect();
+    var ok = frameRect && $('cam').classList.contains('show') && window.innerWidth > window.innerHeight && rail.width > 0;
+    md.classList.toggle('aligned', !!ok);
+    if(!ok){ img.removeAttribute('style'); act.removeAttribute('style'); return; }
+    img.style.left = frameRect.x + 'px'; img.style.top = frameRect.y + 'px';
+    img.style.width = frameRect.w + 'px'; img.style.height = frameRect.h + 'px';
+    act.style.left = rail.left + 'px'; act.style.top = rail.top + 'px';
+    act.style.width = rail.width + 'px'; act.style.height = rail.height + 'px';
+  }
+  function closePreview(){
+    $('previewModal').classList.remove('show');
+    setPreview(null);
   }
 
   $('retakeBtn').addEventListener('click', function(){
-    $('previewModal').classList.remove('show');
+    closePreview();
     pendingStamped = null; pendingOrig = null; pendingDataUrl = null;
   });
 
@@ -1853,11 +2030,11 @@
       }, i * 400);
     });
     showToast('저장 완료');
-    $('previewModal').classList.remove('show');
+    closePreview();
   }
 
   // 아이폰 앱: 사진을 앱으로 넘겨 사진 앱(카메라 롤)에 저장
-  function nativeSave(files){
+  function nativeSave(files, withOrig){
     Promise.all(files.map(function(f){
       return new Promise(function(res, rej){
         var r = new FileReader();
@@ -1866,24 +2043,29 @@
         r.readAsDataURL(f);
       });
     })).then(function(urls){
-      window.webkit.messageHandlers.board.postMessage({ type:'save', images:urls });
+      window.webkit.messageHandlers.board.postMessage({ type:'save', images:urls, original: !!withOrig });
     }).catch(function(){ showToast('저장 실패'); });
   }
   window.__boardSaved = function(ok, msg){
     showToast(ok ? '사진 앱에 저장 완료' : (msg || '저장 실패'));
-    if(ok) $('previewModal').classList.remove('show');
+    if(ok){
+      closePreview();
+      if(lastThumb) $('photosBtn').style.backgroundImage = 'url(' + lastThumb + ')';
+    }
   };
 
   $('saveBtn').addEventListener('click', function(){
     var files = [];
-    if(pendingStamped) files.push(pendingStamped);
-    if(settings.saveOrig !== false && pendingOrig) files.push(pendingOrig);
-    if(nativeApp && files.length){ nativeSave(files); return; }
+    if(!pendingStamped){ showToast('사진을 준비하는 중입니다'); return; }
+    files.push(pendingStamped);
+    var wantOrig = settings.saveOrig !== false && pendingOrig;
+    if(wantOrig && pendingOrig !== 'native') files.push(pendingOrig);
+    if(nativeApp){ nativeSave(files, wantOrig && pendingOrig === 'native'); return; }
     if(isAndroid && files.length){ directDownload(files); return; }
     if(files.length && navigator.share && navigator.canShare && navigator.canShare({files:files})){
       navigator.share({ files:files }).then(function(){
         showToast('저장 완료');
-        $('previewModal').classList.remove('show');
+        closePreview();
       }).catch(function(err){
         if(err && err.name === 'AbortError') return;
         fallbackDownload();
@@ -1892,9 +2074,9 @@
   });
 
   function fallbackDownload(){
-    if(!pendingDataUrl) return;
+    if(!previewUrl) return;
     var a = document.createElement('a');
-    a.href = pendingDataUrl;
+    a.href = previewUrl;
     a.download = '각인_' + stamp() + '.jpg';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     showToast('안 되면 사진을 길게 눌러 저장하세요');

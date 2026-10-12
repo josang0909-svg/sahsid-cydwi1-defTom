@@ -34,6 +34,12 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     private var volumeObservation: NSKeyValueObservation?
     private let volumeView = MPVolumeView(frame: CGRect(x: -2000, y: -2000, width: 10, height: 10))
     private var resettingVolume = false
+
+    /// 플래시 켬/끔 (웹페이지 버튼)
+    private var flashOn = false
+    /// 웹페이지가 원하는 사진 폭. 웹페이지에는 이 크기로 줄여 보내고(빠르게), 원본은 여기 들고 있다가 저장할 때 붙인다.
+    private var captureMaxW: CGFloat = 0
+    private var lastPhoto: Data?
     /// 웹페이지가 알려 준 뷰파인더(4:3) 위치. 카메라 미리보기를 이 자리에만 띄운다.
     private var camRect: CGRect?
 
@@ -56,7 +62,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, zoom: true, hwShutter: true };",
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, zoom: true, hwShutter: true, photos: true, flash: true };",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
@@ -125,14 +131,19 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
         switch type {
-        case "save": save(images: body["images"] as? [String] ?? [])
+        case "save": save(images: body["images"] as? [String] ?? [], original: body["original"] as? Bool ?? false)
         case "geoStart":
             if location.authorizationStatus == .notDetermined { location.requestWhenInUseAuthorization() }
             location.startUpdatingLocation()
         case "geoStop": location.stopUpdatingLocation()
         case "camStart": startCamera()
         case "camStop": stopCamera()
-        case "camCapture": capturePhoto()
+        case "camCapture":
+            captureMaxW = CGFloat(body["maxW"] as? Double ?? 0)
+            capturePhoto()
+        case "camFlash": flashOn = body["on"] as? Bool ?? false
+        case "openPhotos":
+            if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
         case "camZoom":
             if let z = body["z"] as? Double { setZoom(z) }
         case "camRect":
@@ -159,12 +170,14 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 let minD = Double((self.camDevice?.minAvailableVideoZoomFactor ?? 1) / self.zoomBase)
                 let maxD = Double(self.maxZoomFactor / self.zoomBase)
                 let presets = self.zoomPresets.map { String($0) }.joined(separator: ",")
+                let hasFlash = self.photoOutput.supportedFlashModes.contains(.on)
                 DispatchQueue.main.async {
                     self.previewLayer?.isHidden = false
                     self.setShutterButtons(true)
                     self.updateCameraOrientation()
                     self.webView.evaluateJavaScript("window.__camState && window.__camState(true)")
                     self.webView.evaluateJavaScript("window.__camZoom && window.__camZoom(\(minD), \(maxD), 1, [\(presets)])")
+                    self.webView.evaluateJavaScript("window.__camFlash && window.__camFlash(\(hasFlash))")
                 }
             }
         }
@@ -284,6 +297,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         camQueue.async {
             guard self.session.isRunning else { return self.js("window.__camShot && window.__camShot(null)") }
             let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+            if self.photoOutput.supportedFlashModes.contains(.on) { settings.flashMode = self.flashOn ? .on : .off }
             self.photoOutput.capturePhoto(with: settings, delegate: self)
         }
     }
@@ -292,16 +306,34 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         guard error == nil, let data = photo.fileDataRepresentation() else {
             return js("window.__camShot && window.__camShot(null)")
         }
-        js("window.__camShot && window.__camShot('data:image/jpeg;base64,\(data.base64EncodedString())')")
+        lastPhoto = data
+        // 웹페이지에는 보드판을 찍을 크기로 줄여서 보낸다 (원본 12MP를 문자열로 넘기면 느려지고 메모리가 쌓임)
+        let small = Self.downscale(data, maxWidth: captureMaxW) ?? data
+        js("window.__camShot && window.__camShot('data:image/jpeg;base64,\(small.base64EncodedString())', true)")
+    }
+
+    private static func downscale(_ data: Data, maxWidth: CGFloat) -> Data? {
+        guard maxWidth > 0, let image = UIImage(data: data) else { return nil }
+        let size = image.size
+        guard size.width > maxWidth else { return nil }
+        let target = CGSize(width: maxWidth, height: (size.height * maxWidth / size.width).rounded())
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let scaled = UIGraphicsImageRenderer(size: target, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: target))
+        }
+        return scaled.jpegData(compressionQuality: 0.92)
     }
 
     // MARK: - 사진 저장
 
-    private func save(images: [String]) {
-        let photos = images.compactMap { url -> Data? in
+    private func save(images: [String], original: Bool) {
+        var photos = images.compactMap { url -> Data? in
             guard let comma = url.firstIndex(of: ",") else { return nil }
             return Data(base64Encoded: String(url[url.index(after: comma)...]))
         }
+        if original, let orig = lastPhoto { photos.append(orig) }
+        lastPhoto = nil
         guard !photos.isEmpty else { return finishSave(false, "저장할 사진이 없습니다") }
 
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
