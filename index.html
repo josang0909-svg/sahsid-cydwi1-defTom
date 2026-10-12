@@ -39,6 +39,7 @@
   /* 편집 화면: 제목줄은 고정하고 아래 내용만 스크롤 (맨 위에서 끌어내려도 제목줄이 따라 내려오지 않게) */
   .screen{position:fixed;inset:0;background:var(--bg);overflow:hidden;display:none;z-index:30;flex-direction:column;}
   .screen.show{display:flex;}
+  #panelShade{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:29;display:none;}
   .screen > .scr-head{flex:none;}
   .screen > .scr-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;width:100%;}
   /* 스크롤 끝에서 고무줄처럼 늘어나는 효과 끄기 (iOS 16+) */
@@ -335,6 +336,12 @@
     .scr-body.two > .col > .sec:first-child{margin-top:0;}
     .scr-body.two .sticky{position:sticky;top:0;}
 
+    /* 촬영 화면에서 연 시설명·부재 편집: 사진을 가리지 않게 손상 목록 창 크기의 왼쪽 패널 */
+    .screen.panel{right:auto;width:min(460px, 58vw);border-radius:0 16px 16px 0;border-right:1px solid var(--line);
+      box-shadow:8px 0 24px rgba(0,0,0,0.35);}
+    .screen.panel .scr-body.two{display:block;}
+    #panelShade.show{display:block;}
+
     /* 목록·위치 입력 창: 아래에서 올라오는 대신 오른쪽 패널 */
     .sheet{align-items:stretch;justify-content:flex-end;}
     .sheet-inner{width:min(460px, 58vw);max-height:none;height:100%;border-radius:16px 0 0 16px;
@@ -416,6 +423,7 @@
 </div>
 
 <!-- ============ 보드판 설정 ============ -->
+<div id="panelShade"></div>
 <div class="screen" id="scrBoard">
   <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>보드판 설정</h2></div>
   <div class="scr-body two">
@@ -893,12 +901,24 @@
   }
 
   /* ================= 화면 전환 ================= */
-  function showScreen(id){ screenStack.push(id); $(id).classList.add('show'); }
+  // 촬영 화면 위에서 열면 왼쪽 패널로 (가로 화면일 때, CSS가 처리)
+  function showScreen(id){
+    screenStack.push(id);
+    $(id).classList.toggle('panel', $('cam').classList.contains('show'));
+    $(id).classList.add('show');
+    syncShade();
+  }
   function closeScreen(){
     var id = screenStack.pop();
-    if(id) $(id).classList.remove('show');
+    if(id) $(id).classList.remove('show', 'panel');
+    syncShade();
     refreshAll();
   }
+  function syncShade(){ $('panelShade').classList.toggle('show', !!document.querySelector('.screen.panel.show')); }
+  // 패널 바깥(어두운 부분)을 누르면 패널을 모두 닫는다
+  $('panelShade').addEventListener('click', function(){
+    while(screenStack.length && $(screenStack[screenStack.length - 1]).classList.contains('panel')) closeScreen();
+  });
   document.querySelectorAll('[data-back]').forEach(function(b){ b.addEventListener('click', closeScreen); });
   document.querySelectorAll('[data-closesheet]').forEach(function(b){
     b.addEventListener('click', function(){ $(b.getAttribute('data-closesheet')).classList.remove('show'); });
