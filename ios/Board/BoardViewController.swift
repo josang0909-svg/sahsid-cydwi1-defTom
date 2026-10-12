@@ -74,6 +74,11 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
         webView.scrollView.contentInsetAdjustmentBehavior = .never
+        // 페이지 자체는 스크롤하지 않는다 (키보드가 뜰 때 화면이 밀려 카메라 위치가 어긋나던 원인)
+        webView.scrollView.isScrollEnabled = false
+        webView.scrollView.bounces = false
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardDidHide),
+                                               name: UIResponder.keyboardDidHideNotification, object: nil)
         webView.uiDelegate = self
         view.addSubview(webView)
 
@@ -87,6 +92,11 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         applyPreviewFrame()
+    }
+
+    @objc private func keyboardDidHide() {
+        webView.scrollView.setContentOffset(.zero, animated: false)
+        webView.evaluateJavaScript("window.scrollTo(0,0)")
     }
 
     private func applyPreviewFrame() {

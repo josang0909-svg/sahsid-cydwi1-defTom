@@ -1256,8 +1256,9 @@
   }
 
   /* 뷰파인더: 가운데 칸에 들어가는 가장 큰 4:3 사각형. 아이폰 앱에는 이 위치를 알려 카메라를 그 자리에 띄운다 */
-  var frameRect = null;
-  function layoutFrame(){
+  var frameRect = null, sentRect = '';
+  // mode === 'check': 위치만 확인하고 바뀌었을 때만 보드판을 다시 그린다
+  function layoutFrame(mode){
     if(!$('cam').classList.contains('show')) return;
     var cell = $('frameCell').getBoundingClientRect(), pad = 6;
     var cw = cell.width - pad*2, ch = cell.height - pad*2;
@@ -1268,14 +1269,37 @@
     var f = $('camFrame');
     f.style.left = x + 'px'; f.style.top = y + 'px'; f.style.width = fw + 'px'; f.style.height = fh + 'px';
     frameRect = { x: Math.round(cell.left) + x, y: Math.round(cell.top) + y, w: fw, h: fh };
-    if(nativeApp) window.webkit.messageHandlers.board.postMessage({ type:'camRect', x:frameRect.x, y:frameRect.y, w:fw, h:fh });
+    if(nativeApp){
+      // 키보드가 떴다 들어가면 화면이 밀릴 수 있어 실제 화면 기준 좌표(visualViewport)로 보낸다
+      var vv = window.visualViewport, ox = vv ? vv.offsetLeft : 0, oy = vv ? vv.offsetTop : 0;
+      var key = [frameRect.x - ox, frameRect.y - oy, fw, fh].join(',');
+      if(key !== sentRect){
+        sentRect = key;
+        window.webkit.messageHandlers.board.postMessage({ type:'camRect', x:frameRect.x - ox, y:frameRect.y - oy, w:fw, h:fh });
+      } else if(mode === 'check') return;
+    } else if(mode === 'check' && $('camBoard').width) return;
     drawCamBoard();
   }
+  // 촬영 화면에서는 위치가 틀어지지 않았는지 주기적으로 확인 (바뀐 경우에만 다시 보냄)
+  setInterval(function(){
+    if(!$('cam').classList.contains('show') || document.hidden) return;
+    if(window.scrollX || window.scrollY) window.scrollTo(0, 0);
+    layoutFrame('check');
+  }, 700);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', function(){ setTimeout(layoutFrame, 60); });
+    window.visualViewport.addEventListener('scroll', function(){ setTimeout(layoutFrame, 60); });
+  }
+  // 입력칸에서 키보드가 내려가면 밀린 화면을 되돌린다
+  document.addEventListener('focusout', function(){
+    setTimeout(function(){ window.scrollTo(0, 0); layoutFrame(); }, 300);
+  });
   // 보드판을 실제 사진과 같은 비율·위치로 뷰파인더 위에 그린다
   function drawCamBoard(){
     var cv = $('camBoard');
     if(!frameRect || !$('cam').classList.contains('show')) return;
-    var dpr = window.devicePixelRatio || 1;
+    // 레티나 3배 그대로면 캔버스가 수십 MB라 2배·폭 2000px로 제한 (보기엔 차이 없음)
+    var dpr = Math.min(2, window.devicePixelRatio || 1, 2000 / frameRect.w);
     var W = Math.round(frameRect.w * dpr), H = Math.round(frameRect.h * dpr);
     if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
     var ctx = cv.getContext('2d');
@@ -1578,14 +1602,14 @@
     ctx.fillStyle = white ? '#ffffff' : 'rgba(0,0,0,0.45)';
     ctx.fillRect(x, y, boardW, boardH);
 
-    ctx.strokeStyle = white ? '#000000' : 'rgba(255,255,255,0.85)';
-    ctx.lineWidth = lw;
-    ctx.strokeRect(x + lw/2, y + lw/2, boardW - lw, boardH - lw);
-    for(var i=1;i<rows.length;i++){
-      var ly = y + rowH*i;
-      ctx.beginPath(); ctx.moveTo(x, ly); ctx.lineTo(x + boardW, ly); ctx.stroke();
-    }
-    ctx.beginPath(); ctx.moveTo(x + labW, y); ctx.lineTo(x + labW, y + boardH); ctx.stroke();
+    // 테두리·칸선은 채운 사각형으로 그린다 (아이폰에서 stroke 선이 사라지는 경우가 있어서)
+    ctx.fillStyle = white ? '#000000' : 'rgba(255,255,255,0.85)';
+    ctx.fillRect(x, y, boardW, lw);
+    ctx.fillRect(x, y + boardH - lw, boardW, lw);
+    ctx.fillRect(x, y, lw, boardH);
+    ctx.fillRect(x + boardW - lw, y, lw, boardH);
+    for(var i=1;i<rows.length;i++) ctx.fillRect(x, Math.round(y + rowH*i - lw/2), boardW, lw);
+    ctx.fillRect(Math.round(x + labW - lw/2), y, lw, boardH);
 
     ctx.textBaseline = 'middle';
     ctx.fillStyle = white ? '#000000' : '#ffffff';
