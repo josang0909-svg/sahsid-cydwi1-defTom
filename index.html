@@ -188,7 +188,8 @@
   .rail-r{grid-area:r;}
   .rail-t{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:var(--muted);padding:4px 2px 0;}
   .cam-head{flex:none;display:flex;align-items:center;gap:7px;min-width:0;}
-  .cam-back{width:34px;height:34px;flex:none;border-radius:9px;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:17px;padding:0;}
+  /* 뒤로(홈) 버튼은 시설명과 떨어뜨려 왼쪽 칸 맨 아래에 둔다 (시설명 누를 때 잘못 눌리지 않게) */
+  .cam-back{width:100%;height:34px;flex:none;border-radius:var(--r-btn);background:transparent;border:1px solid var(--line);color:var(--muted);font-size:13px;font-weight:700;padding:0;}
   .cam-title{flex:1;min-width:0;line-height:1.3;}
   .cam-title b{white-space:pre-line;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:13px;font-weight:800;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere;}
   .cam-title{cursor:pointer;}
@@ -248,6 +249,9 @@
   .frame-cell{grid-area:f;position:relative;min-width:0;min-height:0;}
   #camFrame{position:absolute;overflow:hidden;background:#000;border-radius:4px;}
   html.live-cam #camFrame{background:transparent;}
+  /* 카메라가 켜져도 뷰파인더 바깥(노치·홈 막대 여백 포함)은 켜기 전과 같은 배경색으로 둔다 */
+  html.live-cam #camFrame{box-shadow:0 0 0 100vmax var(--bg);}
+  .rail{position:relative;z-index:1;}
   #camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
   #cam.live.web #camVideo{display:block;}
   #camBoard{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;}
@@ -634,12 +638,12 @@
 
   <aside class="rail rail-l">
     <div class="cam-head">
-      <button class="cam-back" id="camBack">‹</button>
       <div class="cam-title"><b id="camSite">-</b><span id="camCat">-</span></div>
     </div>
     <div id="ovGps"></div>
     <div class="rail-t">부재</div>
     <div class="rail-list" id="sidebar"></div>
+    <button class="cam-back" id="camBack" type="button">‹ 홈</button>
   </aside>
 
   <div class="frame-cell" id="frameCell">
