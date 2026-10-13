@@ -41,6 +41,20 @@
   /* 편집 화면: 제목줄은 고정하고 아래 내용만 스크롤 (맨 위에서 끌어내려도 제목줄이 따라 내려오지 않게) */
   .screen{position:fixed;inset:0;background:var(--bg);overflow:hidden;display:none;z-index:30;flex-direction:column;}
   .screen.show{display:flex;}
+  .head-btn{flex:none;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:13px;font-weight:600;}
+  .head-btn.danger{color:var(--danger);}
+  .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+  .gal button{position:relative;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card);aspect-ratio:4/3;}
+  .gal img{width:100%;height:100%;object-fit:cover;display:block;}
+  .gal span{position:absolute;left:0;right:0;bottom:0;padding:3px 6px;font-size:11px;color:#fff;background:rgba(0,0,0,0.55);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gal-empty{padding:30px 10px;text-align:center;color:var(--muted);font-size:13px;}
+  .shot-body{display:flex;gap:16px;align-items:flex-start;}
+  .shot-img{flex:1.3;min-width:0;}
+  .shot-img img{width:100%;border-radius:8px;display:block;background:#000;}
+  .shot-form{flex:1;min-width:0;}
+  .shot-form .lblrow .n{width:52px;font-size:12px;}
+  .shot-form .big-btn{margin-top:12px;}
+  @media (orientation:portrait){ .shot-body{flex-direction:column;} .shot-img,.shot-form{width:100%;} }
   #panelShade{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:29;display:none;}
   .screen > .scr-head{flex:none;}
   .screen > .scr-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;width:100%;}
@@ -113,6 +127,10 @@
   .setrow:last-child{border-bottom:none;}
   .setrow .lab{font-size:13px;font-weight:600;flex:none;}
   .setrow .chips{justify-content:flex-end;}
+  .pt-ctl{display:flex;align-items:center;gap:6px;}
+  .pt-ctl button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:16px;}
+  .pt-ctl input{width:64px;padding:7px 6px;text-align:right;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:14px;}
+  .pt-ctl .u{font-size:12px;color:var(--muted);}
   .setrow .chip{padding:7px 11px;font-size:12.5px;}
   .setrow input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);}
 
@@ -335,7 +353,9 @@
   .home-main{padding-top:calc(18px + var(--st));}
   .home-side{padding-bottom:calc(30px + var(--sb));}
   .mark.big{font-size:22px;letter-spacing:5px;padding:4px 10px;border-radius:5px;font-weight:700;}
-  .home-main .shoot-btn{width:100%;justify-content:center;margin-top:18px;padding:17px;font-size:17px;border-radius:12px;}
+  .home-btns{display:flex;gap:10px;margin-top:18px;}
+  .home-main .shoot-btn{flex:1;min-width:0;justify-content:center;padding:17px;font-size:17px;border-radius:12px;}
+  .home-main .shoot-btn.alt{flex:0.7;background:var(--card);color:var(--text);border:1px solid var(--line);}
   .home-main > *,.home-side > *{zoom:var(--zoom);}
 
   @media (orientation:landscape) and (min-width:600px){
@@ -354,7 +374,7 @@
     .home-side .prev-wrap{padding:8px;}
     .home-side table.bprev td{padding:2px 8px;line-height:1.3;}
     .home-side{padding-bottom:max(8px, var(--sb));}
-    .home-main .shoot-btn{margin-top:auto;position:sticky;bottom:0;}
+    .home-btns{margin-top:auto;position:sticky;bottom:0;}
     .home-main .sec:last-of-type{margin-bottom:18px;}
 
     .scr-head{padding-top:calc(8px + var(--st));padding-bottom:8px;}
@@ -426,7 +446,10 @@
         </div>
       </div>
 
-      <button class="shoot-btn" id="shootBtn">촬영 시작</button>
+      <div class="home-btns">
+        <button class="shoot-btn alt" id="galleryBtn">사진 편집</button>
+        <button class="shoot-btn" id="shootBtn">촬영 시작</button>
+      </div>
     </section>
 
     <section class="home-side">
@@ -464,7 +487,8 @@
    <div class="col">
     <div class="card">
       <div class="setrow"><span class="lab">배경</span><div class="chips" id="c_bg"></div></div>
-      <div class="setrow"><span class="lab">글자 크기</span><div class="chips" id="c_size"></div></div>
+      <div class="setrow"><span class="lab">글꼴</span><div class="chips" id="c_font"></div></div>
+      <div class="setrow"><span class="lab">글자 크기</span><div class="pt-ctl"><button type="button" id="ptMinus">−</button><input id="ptIn" type="text" inputmode="decimal"><span class="u">pt</span><button type="button" id="ptPlus">＋</button></div></div>
       <div class="setrow"><span class="lab">줄 높이</span><div class="chips" id="c_rowH"></div></div>
       <div class="setrow"><span class="lab">글자 굵기</span><div class="chips" id="c_wt"></div></div>
       <div class="setrow"><span class="lab">항목명 정렬</span><div class="chips" id="c_align"></div></div>
@@ -568,6 +592,26 @@
 </div>
 
 <!-- ============ 범용 목록 화면 (종류 / 시설명) ============ -->
+<!-- ============ 촬영한 사진 (앱 안에서 보기·내용 수정) ============ -->
+<div class="screen" id="scrGallery">
+  <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>촬영한 사진</h2><button class="head-btn" id="galPhotos" type="button">사진 앱</button></div>
+  <div class="scr-body">
+    <div class="hintline">이 앱으로 찍어 저장한 사진입니다. 누르면 크게 보고 보드판 내용을 고쳐 새 사진으로 저장할 수 있습니다. (최근 200장)</div>
+    <div class="gal" id="galGrid"></div>
+  </div>
+</div>
+<div class="screen" id="scrShot">
+  <div class="scr-head"><button class="back-btn" data-back>‹</button><h2 id="shotTitle">사진</h2><button class="head-btn danger" id="shotDel" type="button">삭제</button></div>
+  <div class="scr-body shot-body">
+    <div class="shot-img"><img id="shotImg" alt=""></div>
+    <div class="shot-form">
+      <div class="card" id="shotFields"></div>
+      <button class="big-btn" id="shotSave" type="button">수정한 내용으로 새 사진 저장</button>
+      <div class="hintline">원래 사진은 그대로 두고, 고친 보드판을 붙인 사진이 새로 저장됩니다. 촬영 시각·위치(EXIF)는 원래 사진 그대로입니다.</div>
+    </div>
+  </div>
+</div>
+
 <div class="screen" id="scrList">
   <div class="scr-head"><button class="back-btn" data-back>‹</button><h2 id="scrListTitle">목록</h2></div>
   <div class="scr-body">
@@ -717,11 +761,20 @@
   /* ================= 상태 ================= */
   var SET_DEFAULT = {
     bg:'white', size:100, pos:'bl', res:2048, gps:false, saveOrig:true,
-    rowH:1.2, margin:0, align:'dist', weight:400,   // 기본값은 기존에 쓰던 보드판 앱과 같은 크기·비율
+    rowH:1.2, margin:0, align:'dist', weight:700, pt:21.5, font:'system', fontV:2,
     labels:['일자','시설명','부재명','위치','내용']
   };
   var settings = load('bd_settings', SET_DEFAULT);
   if(!settings.labels || settings.labels.length !== 5) settings.labels = SET_DEFAULT.labels.slice();
+  // 10.13: 글씨는 다시 굵게, 크기는 10.12와 10.13의 중간(pt 단위)으로
+  var rawSet = {}; try{ rawSet = JSON.parse(localStorage.getItem('bd_settings') || '{}') || {}; }catch(e){}
+  if(rawSet.fontV !== 2){
+    settings.weight = 700;
+    settings.pt = Math.round(21.5 * (settings.size || 100) / 100 * 2) / 2;
+    settings.font = settings.font || 'system';
+    settings.fontV = 2;
+    save('bd_settings', settings);
+  }
   var tree = normalize(loadTree());
   addOverviewMember();
   var values = load('bd_values', { cat:'', site:'', member:'', loc:'', note:'' });
@@ -811,7 +864,7 @@
   function rowsData(){
     var L = settings.labels;
     return [
-      { label:spaced(L[0]), value: todayStr() },
+      { label:spaced(L[0]), value: values.dateText || todayStr() },
       { label:spaced(L[1]), value: values.site },
       { label:spaced(L[2]), value: values.member },
       { label:spaced(L[3]), value: values.loc },
@@ -968,9 +1021,9 @@
 
   /* ================= 화면 전환 ================= */
   // 촬영 화면 위에서 열면 왼쪽 패널로 (가로 화면일 때, CSS가 처리)
-  function showScreen(id){
+  function showScreen(id, full){
     screenStack.push(id);
-    $(id).classList.toggle('panel', $('cam').classList.contains('show'));
+    $(id).classList.toggle('panel', !full && $('cam').classList.contains('show'));
     $(id).classList.add('show');
     syncShade();
   }
@@ -1025,7 +1078,7 @@
     renderCatChips();
     if(document.activeElement !== siteInput) siteInput.value = values.site || '';
     var c = curCat();
-    $('navBoardVal').textContent = (settings.bg === 'white' ? '흰색' : '투명') + ' · ' + settings.size + '%';
+    $('navBoardVal').textContent = (settings.bg === 'white' ? '흰색' : '투명') + ' · ' + (settings.pt || 21.5) + 'pt';
     $('navMemberVal').textContent = c ? (c.members.length + '개') : '';
     $('navCatVal').textContent = values.cat || '';
     fillPrev($('homePrev'));
@@ -1044,7 +1097,7 @@
   /* ================= 보드판 설정 화면 ================= */
   var CHIPCFG = {
     c_bg:   { key:'bg',   items:[['white','흰색'],['trans','투명']] },
-    c_size: { key:'size', items:[[70,'70%'],[80,'80%'],[90,'90%'],[100,'100%'],[115,'115%'],[130,'130%']] },
+    c_font: { key:'font', items:[['system','기본 고딕'],['noto','본고딕'],['nanum','나눔고딕'],['gothica1','고딕 A1'],['myeongjo','나눔명조']] },
     c_rowH: { key:'rowH', items:[[1.2,'딱 맞게'],[1.45,'보통'],[1.75,'넉넉히']] },
     c_wt:   { key:'weight', items:[[400,'보통'],[700,'굵게']] },
     c_align:{ key:'align', items:[['dist','양끝 배분'],['center','가운데']] },
@@ -1052,7 +1105,21 @@
     c_mar:  { key:'margin', items:[[0,'붙이기'],[1,'띄우기']] },
     c_res:  { key:'res',  items:[[0,'원본'],[3072,'3072'],[2048,'2048'],[1024,'1024']] }
   };
+  // 글자 크기(pt): 사진 폭 1000 기준 글자 크기. 21.5pt = 기본
+  function setPt(v){
+    v = Math.min(60, Math.max(8, Math.round(v * 2) / 2));
+    if(isNaN(v)) v = SET_DEFAULT.pt;
+    settings.pt = v; saveSettings();
+    $('ptIn').value = v;
+    fillPrev($('boardPrev')); fillPrev($('homePrev'));
+  }
+  $('ptMinus').addEventListener('click', function(){ setPt((settings.pt || 21.5) - 0.5); });
+  $('ptPlus').addEventListener('click', function(){ setPt((settings.pt || 21.5) + 0.5); });
+  $('ptIn').addEventListener('change', function(){ setPt(parseFloat(String($('ptIn').value).replace(',', '.'))); });
+  $('ptIn').addEventListener('keydown', function(e){ if(e.key === 'Enter') $('ptIn').blur(); });
+
   function renderSetChips(){
+    $('ptIn').value = settings.pt || 21.5;
     Object.keys(CHIPCFG).forEach(function(cid){
       var cfg = CHIPCFG[cid], box = $(cid);
       box.innerHTML = '';
@@ -1063,6 +1130,7 @@
         b.addEventListener('click', function(){
           settings[cfg.key] = p[0]; saveSettings();
           renderSetChips(); fillPrev($('boardPrev')); fillPrev($('homePrev'));
+          if(cfg.key === 'font' || cfg.key === 'weight') ensureBoardFont().then(function(){ fillPrev($('boardPrev')); });
         });
         box.appendChild(b);
       });
@@ -1710,13 +1778,41 @@
     drawBoard(ctx, W, H);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
+  /* 보드판 글꼴: 기본은 아이폰 고딕, 나머지는 구글 글꼴을 처음 고를 때 내려받는다 (안 되면 기본 고딕) */
+  var BOARD_FONTS = {
+    system:   { css:'-apple-system, "Apple SD Gothic Neo", sans-serif' },
+    noto:     { fam:'Noto Sans KR',   q:'Noto+Sans+KR:wght@400;700' },
+    nanum:    { fam:'Nanum Gothic',   q:'Nanum+Gothic:wght@400;700' },
+    gothica1: { fam:'Gothic A1',      q:'Gothic+A1:wght@400;700' },
+    myeongjo: { fam:'Nanum Myeongjo', q:'Nanum+Myeongjo:wght@400;700' }
+  };
+  function boardFamily(){
+    var f = BOARD_FONTS[settings.font] || BOARD_FONTS.system;
+    return f.fam ? '"' + f.fam + '", -apple-system, "Apple SD Gothic Neo", sans-serif' : f.css;
+  }
+  var fontLinks = {};
+  function ensureBoardFont(){
+    var f = BOARD_FONTS[settings.font];
+    if(!f || !f.fam || !document.fonts) return Promise.resolve();
+    if(!fontLinks[f.q]){
+      var l = document.createElement('link');
+      l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=' + f.q + '&display=swap';
+      document.head.appendChild(l);
+      fontLinks[f.q] = new Promise(function(res){ l.onload = res; l.onerror = res; setTimeout(res, 4000); });
+    }
+    var w = settings.weight || 700;
+    return fontLinks[f.q].then(function(){
+      return Promise.race([document.fonts.load(w + ' 40px "' + f.fam + '"', '가나다ABC123'), new Promise(function(r){ setTimeout(r, 4000); })]);
+    }).catch(function(){});
+  }
+  ensureBoardFont().then(function(){ if(typeof drawCamBoard === 'function') drawCamBoard(); });
+
   function splitLines(v){
     return String(v || '').split(/\s*\/\/\s*|\n/);
   }
   function drawBoard(ctx, W, H){
     var rows = rowsData(), rawLabels = settings.labels;
-    var mult = settings.size / 100;
-    var fs = Math.max(11, Math.round(W * 0.024 * mult));   // 100% = 기존 보드판 앱 글자 크기
+    var fs = Math.max(11, Math.round(W * (settings.pt || 21.5) / 1000));   // pt = 사진 폭 1000 기준 글자 크기
     var padX = Math.round(fs * 0.45);
     var rowH = Math.round(fs * (settings.rowH || 1.2));     // 줄 높이: 글자 크기에 맞춤
     // 줄바꿈: 내용에 // (또는 엔터)가 있으면 그 칸만 여러 줄로
@@ -1727,7 +1823,8 @@
     rowHs.forEach(function(h){ rowTop.push(acc); acc += h; });
     var boardH = acc;
     var weight = settings.weight || 400;
-    var FONT = function(s){ return weight + ' ' + s + 'px -apple-system, "Apple SD Gothic Neo", sans-serif'; };
+    var fam = boardFamily();
+    var FONT = function(s){ return weight + ' ' + s + 'px ' + fam; };
     var dist = settings.align !== 'center';
     // 양끝 배분: 항목명 글자를 칸 폭에 고르게 벌린다 (한글 배분정렬처럼)
     var labText = rows.map(function(r, i){ return dist ? (rawLabels[i] || '').replace(/\s/g, '') : r.label; });
@@ -2056,8 +2153,10 @@
   }
 
   /* 사진 앱 바로가기 (아이폰 앱). 버튼에는 마지막으로 저장한 사진이 작게 보인다 */
-  if(nativeApp && window.__boardApp && window.__boardApp.photos) document.documentElement.classList.add('has-photos');
-  $('photosBtn').addEventListener('click', function(){
+  document.documentElement.classList.add('has-photos');
+  var hasPhotosApp = nativeApp && window.__boardApp && window.__boardApp.photos;
+  $('photosBtn').addEventListener('click', function(){ openGallery(); });
+  $('galPhotos').addEventListener('click', function(){
     window.webkit.messageHandlers.board.postMessage({ type:'openPhotos' });
   });
   var lastThumb = null;
@@ -2267,7 +2366,11 @@
   }
   function loadAndProcess(src, after){
     var img = new Image();
-    img.onload = function(){ img.onload = img.onerror = null; processCaptured(img); img.src = ''; if(after) after(); };
+    img.onload = function(){
+      img.onload = img.onerror = null;
+      // 다른 글꼴을 골랐으면 내려받은 뒤 그린다
+      ensureBoardFont().then(function(){ processCaptured(img); img.src = ''; if(after) after(); });
+    };
     img.onerror = function(){ img.onload = img.onerror = null; shooting = 0; showToast('사진을 불러오지 못했습니다'); if(after) after(); };
     img.src = src;
   }
@@ -2286,12 +2389,20 @@
     workCanvas.width = W; workCanvas.height = H;
     var ctx = workCanvas.getContext('2d');
     ctx.drawImage(img, 0, 0, W, H);
+    // 보드판 없는 사진을 따로 보관해 두면 나중에 내용만 고쳐 다시 붙일 수 있다 (toBlob은 지금 그림을 복사해 둔다)
+    var whenRec = shotTime || new Date();
+    var rec = { id: whenRec.getTime(), time: whenRec.toISOString(),
+      values: { cat: values.cat, site: values.site, member: values.member, loc: values.loc, note: values.note },
+      geo: (settings.gps && geo.lat != null) ? { lat: geo.lat, lon: geo.lon, alt: geo.alt } : null,
+      set: JSON.parse(JSON.stringify(settings)) };
+    rec._baseP = new Promise(function(res){ workCanvas.toBlob(res, 'image/jpeg', 0.9); });
     drawBoard(ctx, W, H);
 
-    // 사진 앱 버튼에 쓸 작은 미리보기
-    var tc = document.createElement('canvas'); tc.width = 120; tc.height = Math.round(120 * H / W);
+    // 촬영 화면 사진 버튼·앱 안 사진 목록에 쓸 작은 미리보기
+    var tc = document.createElement('canvas'); tc.width = 240; tc.height = Math.round(240 * H / W);
     tc.getContext('2d').drawImage(workCanvas, 0, 0, tc.width, tc.height);
     lastThumb = tc.toDataURL('image/jpeg', 0.7);
+    rec.thumb = lastThumb;
 
     // 아이폰 앱·안드로이드는 [사진 사용]을 누르면 바로 저장되므로 안내 없음
     $('saveHint').textContent = (isAndroid || nativeApp) ? ''
@@ -2308,6 +2419,7 @@
         if(gen !== procGen) return;
         shooting = 0;
         pendingStamped = new File([blob], '각인_' + stamp() + '.jpg', {type:'image/jpeg'});
+        pendingRec = rec;
         setPreview(URL.createObjectURL(blob));
         alignPreview();
         $('previewModal').classList.add('show');
@@ -2398,7 +2510,7 @@
 
   $('retakeBtn').addEventListener('click', function(){
     closePreview();
-    pendingStamped = null; pendingOrig = null; pendingOrigId = null;
+    pendingStamped = null; pendingOrig = null; pendingOrigId = null; pendingRec = null;
   });
 
   // 안드로이드: 공유 시트 없이 바로 내려받기 (갤러리 'Download' 앨범에 자동 저장)
@@ -2444,6 +2556,7 @@
   $('saveBtn').addEventListener('click', function(){
     var files = [];
     if(!pendingStamped){ showToast('사진을 준비하는 중입니다'); return; }
+    if(pendingRec){ keepShot(pendingRec); pendingRec = null; }
     files.push(pendingStamped);
     var wantOrig = settings.saveOrig !== false && pendingOrig;
     if(wantOrig && pendingOrig !== 'native') files.push(pendingOrig);
@@ -2467,6 +2580,184 @@
     a.download = '각인_' + stamp() + '.jpg';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     showToast('안 되면 사진을 길게 눌러 저장하세요');
+  }
+
+  /* ================= 촬영한 사진 보관 · 앱 안에서 보기 · 내용 수정 =================
+     [사진 사용]으로 저장한 사진마다 보드판 없는 사진과 그때의 내용·설정을 이 기기(IndexedDB)에 둔다.
+     목록에서 고르면 내용만 고쳐 보드판을 다시 붙인 새 사진을 저장한다. */
+  var pendingRec = null, MAX_SHOTS = 200;
+  var ShotDB = (function(){
+    var dbp = null;
+    function db(){
+      if(!dbp) dbp = new Promise(function(res, rej){
+        var r = indexedDB.open('board-shots', 1);
+        r.onupgradeneeded = function(){ r.result.createObjectStore('shots', { keyPath:'id' }); };
+        r.onsuccess = function(){ res(r.result); };
+        r.onerror = function(){ dbp = null; rej(r.error); };
+      });
+      return dbp;
+    }
+    function run(mode, fn){
+      return db().then(function(d){
+        return new Promise(function(res, rej){
+          var t = d.transaction('shots', mode), req = fn(t.objectStore('shots'));
+          t.oncomplete = function(){ res(req ? req.result : undefined); };
+          t.onerror = t.onabort = function(){ rej(t.error); };
+        });
+      });
+    }
+    function list(){
+      return run('readonly', function(st){ return st.getAll(); }).then(function(a){
+        return (a || []).sort(function(x, y){ return y.id - x.id; });
+      });
+    }
+    return {
+      list: list,
+      get: function(id){ return run('readonly', function(st){ return st.get(id); }); },
+      put: function(r){
+        return run('readwrite', function(st){ st.put(r); }).then(function(){
+          return list().then(function(a){   // 오래된 것부터 정리
+            var old = a.slice(MAX_SHOTS);
+            if(old.length) return run('readwrite', function(st){ old.forEach(function(o){ st.delete(o.id); }); });
+          });
+        });
+      },
+      del: function(id){ return run('readwrite', function(st){ st.delete(id); }); }
+    };
+  })();
+  if(navigator.storage && navigator.storage.persist) try{ navigator.storage.persist(); }catch(e){}
+  function keepShot(r){
+    var p = r._baseP; delete r._baseP;
+    (p || Promise.resolve(r.base)).then(function(b){
+      if(!b || !window.indexedDB) return;
+      r.base = b;
+      return ShotDB.put(r);
+    }).catch(function(){ showToast('앱 안 사진 보관 실패 (사진 앱 저장은 그대로)'); });
+  }
+  // 촬영 화면 사진 버튼에 마지막 사진
+  if(window.indexedDB) ShotDB.list().then(function(a){
+    if(a[0] && a[0].thumb && !lastThumb) $('photosBtn').style.backgroundImage = 'url(' + a[0].thumb + ')';
+  }).catch(function(){});
+
+  function fmtShot(t){ var d = new Date(t); return pad2(d.getMonth() + 1) + '.' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+  function oneLine(v){ return String(v || '').replace(/\s*\/\/\s*|\n/g, ' '); }
+
+  function openGallery(){
+    $('galPhotos').style.display = hasPhotosApp ? '' : 'none';
+    showScreen('scrGallery', true);
+    renderGallery();
+  }
+  $('galleryBtn').addEventListener('click', openGallery);
+  function renderGallery(){
+    var g = $('galGrid');
+    if(!window.indexedDB){ g.innerHTML = '<div class="gal-empty">이 기기에서는 사진 보관을 쓸 수 없습니다.</div>'; return; }
+    ShotDB.list().then(function(a){
+      g.innerHTML = '';
+      if(!a.length){ g.innerHTML = '<div class="gal-empty">아직 이 앱으로 저장한 사진이 없습니다.<br>(이번 업데이트 이후 [사진 사용]으로 저장한 사진부터 여기에 모입니다)</div>'; return; }
+      a.forEach(function(r){
+        var b = document.createElement('button'); b.type = 'button';
+        var im = document.createElement('img'); im.src = r.thumb || ''; im.alt = '';
+        var cap = document.createElement('span');
+        cap.textContent = fmtShot(r.time) + ' · ' + oneLine([r.values.member, r.values.loc].filter(Boolean).join(' ') || r.values.site);
+        b.appendChild(im); b.appendChild(cap);
+        b.addEventListener('click', function(){ openShot(r.id); });
+        g.appendChild(b);
+      });
+    }).catch(function(){ g.innerHTML = '<div class="gal-empty">사진 목록을 불러오지 못했습니다.</div>'; });
+  }
+
+  // 그 사진을 찍을 때의 내용·설정으로 잠깐 바꿔서 보드판을 그린다
+  function withShot(rec, vals, fn){
+    var sv = values, ss = settings, st = shotTime, sg = geo;
+    values = vals;
+    settings = Object.assign({}, ss, rec.set || {});
+    shotTime = new Date(rec.time);
+    geo = rec.geo ? { lat: rec.geo.lat, lon: rec.geo.lon, alt: rec.geo.alt } : { lat:null, lon:null, alt:null };
+    try{ return fn(); } finally{ values = sv; settings = ss; shotTime = st; geo = sg; }
+  }
+  function renderShot(rec, vals){
+    var fontP = withShot(rec, vals, function(){ return ensureBoardFont(); });
+    return fontP.then(function(){
+      return new Promise(function(res, rej){
+        var url = URL.createObjectURL(rec.base), img = new Image();
+        img.onload = function(){
+          URL.revokeObjectURL(url);
+          var c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+          var ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
+          withShot(rec, vals, function(){ drawBoard(ctx, c.width, c.height); });
+          var tc = document.createElement('canvas'); tc.width = 240; tc.height = Math.round(240 * c.height / c.width);
+          tc.getContext('2d').drawImage(c, 0, 0, tc.width, tc.height);
+          var thumb = tc.toDataURL('image/jpeg', 0.7);
+          c.toBlob(function(raw){ c.width = c.height = 0; raw ? res({ blob: raw, thumb: thumb }) : rej(); }, 'image/jpeg', 0.92);
+        };
+        img.onerror = function(){ URL.revokeObjectURL(url); rej(); };
+        img.src = url;
+      });
+    });
+  }
+
+  var curShot = null, shotVals = null, shotUrl = null, shotT = 0;
+  function showShotImg(blob){
+    if(shotUrl) URL.revokeObjectURL(shotUrl);
+    shotUrl = URL.createObjectURL(blob);
+    $('shotImg').src = shotUrl;
+  }
+  function openShot(id){
+    ShotDB.get(id).then(function(rec){
+      if(!rec || !rec.base){ showToast('사진을 찾을 수 없습니다'); return; }
+      curShot = rec;
+      shotVals = Object.assign({}, rec.values);
+      if(!shotVals.dateText) shotVals.dateText = withShot(rec, rec.values, function(){ return todayStr(); });
+      $('shotTitle').textContent = fmtShot(rec.time) + ' 촬영';
+      var labels = (rec.set && rec.set.labels) || settings.labels;
+      var keys = ['dateText', 'site', 'member', 'loc', 'note'];
+      var box = $('shotFields'); box.innerHTML = '';
+      keys.forEach(function(k, i){
+        var row = document.createElement('div'); row.className = 'lblrow';
+        var n = document.createElement('span'); n.className = 'n'; n.textContent = labels[i] || '';
+        var t = document.createElement('textarea'); t.rows = 1; t.value = shotVals[k] || '';
+        t.addEventListener('input', function(){
+          shotVals[k] = t.value;
+          clearTimeout(shotT); shotT = setTimeout(refreshShot, 300);
+        });
+        row.appendChild(n); row.appendChild(t); box.appendChild(row);
+      });
+      $('shotImg').removeAttribute('src');
+      showScreen('scrShot', true);
+      box.querySelectorAll('textarea').forEach(autoGrow);
+      refreshShot();
+    }).catch(function(){ showToast('사진을 불러오지 못했습니다'); });
+  }
+  function refreshShot(){
+    var rec = curShot; if(!rec) return;
+    renderShot(rec, shotVals).then(function(o){ if(rec === curShot) showShotImg(o.blob); }).catch(function(){});
+  }
+  $('shotSave').addEventListener('click', function(){
+    var rec = curShot; if(!rec) return;
+    var vals = Object.assign({}, shotVals);
+    renderShot(rec, vals).then(function(o){
+      return withExif(o.blob, new Date(rec.time), rec.geo).then(function(blob){
+        saveEdited(new File([blob], '각인_' + stamp() + '.jpg', { type:'image/jpeg' }));
+        rec.values = vals; rec.thumb = o.thumb;
+        return ShotDB.put(rec);
+      });
+    }).then(function(){ renderGallery(); }).catch(function(){ showToast('저장 실패'); });
+  });
+  $('shotDel').addEventListener('click', function(){
+    var rec = curShot; if(!rec) return;
+    if(!confirm('앱 안 목록에서 이 사진을 지울까요? (사진 앱에 저장된 사진은 그대로입니다)')) return;
+    ShotDB.del(rec.id).then(function(){ curShot = null; closeScreen(); renderGallery(); });
+  });
+  function saveEdited(file){
+    if(nativeApp){ nativeSave([file], false, null); return; }
+    if(isAndroid){ directDownload([file]); return; }
+    if(navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
+      navigator.share({ files:[file] }).then(function(){ showToast('저장 완료'); }).catch(function(){});
+      return;
+    }
+    var u = URL.createObjectURL(file), a = document.createElement('a');
+    a.href = u; a.download = file.name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 4000);
   }
 
   var toast = $('toast');
