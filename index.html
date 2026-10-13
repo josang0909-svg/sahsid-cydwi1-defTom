@@ -10,7 +10,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#181616">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAADoElEQVR4nO3cQW7bMBRFUabobtK1taNuIh1lb1lQBwaMoM1TZFukQv5zpklhgbz+imTVT88vPxt85NvZB8DXJQ4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEImDSBxE4iASB5E4iMRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEH0/+wCO8fb79exD+NePP7/OPoRHPc3+xfhfMIv3pk5k7tPKFy+jzXCEGyaOY5Z1n+U4/zdrHHOt+FxHezVrHAwwZRwzvhFnPOYp42AMcRCJg0gcROIgEgeROIjEQSQOonM+sp/xduHpxn/6PzQOTRxiWCXjTivKOMqwlRwxOWTRSe8R0n1yKKOf3mvbNw5l9NZ1hV3KEnWMw9gYo98614pDGSN1Wm2nFSJxEHWJwzllvB5rbnIQiYNIHETiIBIHkTiIFvlmn0dsfPBd/Jq8bhx7Hoa4/k7NSirGccczMpd/Ui2RWnE8+OhUtUQK/UF61EN1U38H3E2qxHHsjhbpo0QcPfayQh/rx9FvF5fvY/E4eu/f2n2sHMeYnVu4j1qXssmHV6cL7/pOy06OnVv79vs13bfY+NF9rzWdZePYY8/e17nl9b8149jzVt6/63t+c8nhsWYcn7p1HtScHxXjuG+nC/axYBxnTfj1ziwLxrHtkQFQbXiUi4P9xEEkDiJxEImDSBxE5eJ45G7Eencyti0Yx1l3I9a7C7JgHJ+6bwBUGxutZhzt9p0uWEZbNY5jP2Q/9gGAiawZx043/XfZgpaNY/8Tfmn7N35032tNxwPGrdUeDxuWnRxt1Bt61bHR1o6j9d+5hctoy8fReu7f2mW0CnG0Pru4fBmtSBzt6L2sUEarE0c7bkeLlNGqXcpe9vXuC9c6WVzUiuPijkSqZXFRMY6L6377HtKkbhxXxQvYUOgPUm4lDiJxEImDSBxE4iASB5E4iLrE4am78XqsuclBJA6iXnE4s4zUabU7Tg59jNFvnZ1WiPrGYXj01nWFu08OffTTe22fnl9+dn2BK8/UHGjMW27c3xxGyFGGreS4yfGeKXKH8e+uc+JgCi5licRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIHkTiIxEEkDiJxEImDSBxE4iASB5E4iMRBJA4icRCJg0gcROIgEgeROIjEQSQOInEQiYNIHETiIBIH0V/G19ZfgFBNKAAAAABJRU5ErkJggg==">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <style>
   /* 색상표 — 현장내비와 같은 Kanagawa Dragon. [화면 설정]에서 바꾼 값은 아래 변수를 덮어쓴다 */
   :root{
@@ -23,7 +24,7 @@
     --st:env(safe-area-inset-top, 0px); --sb:env(safe-area-inset-bottom, 0px);
     /* 화면 설정 값 (기본) */
     --zoom:1; --side-w:118px; --dmg-w:150px; --side-fs:13px; --side-pad:11px;
-    --dmg-fs:12.5px; --dmg-pad:10px; --shutter:76px;
+    --dmg-fs:13px; --dmg-pad:10px; --shutter:76px;
     --r-btn:9px; --cam-gap:6px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
@@ -190,11 +191,9 @@
   .cam-head{flex:none;display:flex;align-items:center;gap:7px;min-width:0;}
   /* 뒤로(홈) 버튼은 시설명과 떨어뜨려 왼쪽 칸 맨 아래에 둔다 (시설명 누를 때 잘못 눌리지 않게) */
   .cam-back{width:100%;height:34px;flex:none;border-radius:var(--r-btn);background:transparent;border:1px solid var(--line);color:var(--muted);font-size:13px;font-weight:700;padding:0;}
-  .cam-title{flex:1;min-width:0;line-height:1.3;}
-  .cam-title b{white-space:pre-line;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:13px;font-weight:800;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere;}
-  .cam-title{cursor:pointer;}
-  .cam-title b::after{content:' ▾';color:var(--accent);font-size:11px;}
-  .cam-title span{display:block;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* 시설명: 오른쪽 위치 칸과 같은 테두리 칸 (누르면 시설명 바꾸기) */
+  .cam-title{flex:1;min-width:0;cursor:pointer;}
+  .cam-title b{white-space:pre-line;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:15px;font-weight:800;line-height:1.3;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere;}
   #ovGps{flex:none;font-size:10px;color:var(--accent);line-height:1.35;white-space:pre-line;font-family:"Courier New",monospace;}
   #ovGps:empty{display:none;}
   .rail-list{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -638,10 +637,10 @@
 
   <aside class="rail rail-l">
     <div class="cam-head">
-      <div class="cam-title"><b id="camSite">-</b><span id="camCat">-</span></div>
+      <button class="loc-btn cam-title" type="button"><small>시설명</small><b id="camSite">-</b></button>
     </div>
     <div id="ovGps"></div>
-    <div class="rail-t">부재</div>
+    <div class="rail-t">부재명</div>
     <div class="rail-list" id="sidebar"></div>
     <button class="cam-back" id="camBack" type="button">‹ 홈</button>
   </aside>
@@ -662,7 +661,7 @@
 
   <aside class="rail rail-r">
     <button class="loc-btn" id="qLoc"><small>위치</small><span>-</span></button>
-    <div class="rail-t">손상</div>
+    <div class="rail-t">손상명</div>
     <div class="rail-list" id="bottomBar"></div>
     <div class="shot-box"><button class="photos-btn" id="photosBtn" type="button" aria-label="사진 앱"></button><button class="capture-btn" id="captureBtn"><span class="dot"></span></button></div>
   </aside>
@@ -1459,7 +1458,6 @@
 
   function renderCam(){
     $('camSite').textContent = values.site || '시설명 미입력';
-    $('camCat').textContent = values.cat || '';
     $('qLoc').querySelector('span').textContent = values.loc || '-';
     renderSidebar(); renderBottom(); renderGps();
     layoutFrame();
@@ -2874,7 +2872,7 @@
     ['cam', 'side-fs',  '부재 글씨',         10,  20, 0.5, 'px', 13],
     ['cam', 'side-pad', '부재 버튼 높이',     4,  22, 1,   'px', 11],
     ['cam', 'dmg-w',    '손상 칸 폭',       110, 220, 2,   'px', 150],
-    ['cam', 'dmg-fs',   '손상 글씨',         10,  20, 0.5, 'px', 12.5],
+    ['cam', 'dmg-fs',   '손상 글씨',         10,  20, 0.5, 'px', 13],
     ['cam', 'dmg-pad',  '손상 버튼 높이',     4,  22, 1,   'px', 10],
     ['cam', 'shutter',  '촬영 버튼 크기',    56, 100, 2,   'px', 76],
     ['cam', 'cam-gap',  '버튼 간격',          2,  14, 1,   'px', 6],

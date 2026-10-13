@@ -1,6 +1,6 @@
 // 오프라인용 서비스 워커: 앱 파일을 캐시해 두고, 온라인이면 최신 버전으로 갱신
-const CACHE = 'board-v1';
-const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'board-v2';
+const FILES = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

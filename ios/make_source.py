@@ -4,7 +4,7 @@ import json, sys, datetime
 version, url, size, out = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
 repo = "https://github.com/josang0909-svg/sahsid-cydwi1-defTom"
 date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-icon = "https://raw.githubusercontent.com/josang0909-svg/sahsid-cydwi1-defTom/main/icon-512.png"
+icon = "https://raw.githubusercontent.com/josang0909-svg/sahsid-cydwi1-defTom/main/icon-512.png?v=2"
 
 source = {
     "name": "현장 보드판",
