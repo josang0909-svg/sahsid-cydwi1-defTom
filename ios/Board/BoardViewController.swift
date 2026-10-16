@@ -63,7 +63,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, photos: true, focus: true };",
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, photos: true, focus: true, http: true };",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
@@ -120,6 +120,28 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         DispatchQueue.main.async { self.webView.evaluateJavaScript(code) }
     }
 
+    // MARK: - 구글 시트 연동 요청 (웹뷰 fetch는 file:// 페이지라 CORS·리디렉트에 막힐 수 있어 앱이 대신 보낸다)
+
+    private func httpRequest(id: Int, url: String, method: String, body: String?) {
+        guard let u = URL(string: url), u.scheme == "https" else {
+            js("window.__httpDone && __httpDone(\(id), 0, '')"); return
+        }
+        var req = URLRequest(url: u, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 55)
+        req.httpMethod = method
+        if let body = body {
+            req.httpBody = body.data(using: .utf8)
+            req.setValue("text/plain;charset=utf-8", forHTTPHeaderField: "Content-Type")
+        }
+        URLSession.shared.dataTask(with: req) { data, response, _ in
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let text = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+            // 응답 글자를 JSON 문자열로 감싸 그대로 넘긴다
+            let quoted = (try? JSONSerialization.data(withJSONObject: [text], options: []))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
+            self.js("window.__httpDone && __httpDone(\(id), \(status), \(quoted)[0])")
+        }.resume()
+    }
+
     // MARK: - 페이지 로드
 
     private func loadPage() {
@@ -163,6 +185,9 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 focus(at: CGPoint(x: x, y: y), lock: body["lock"] as? Bool ?? false)
             }
         case "camBias": setBias(Float(body["bias"] as? Double ?? 0))
+        case "http":
+            httpRequest(id: body["id"] as? Int ?? 0, url: body["url"] as? String ?? "",
+                        method: body["method"] as? String ?? "GET", body: body["body"] as? String)
         case "openPhotos":
             if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
         case "camZoom":

@@ -3106,23 +3106,42 @@
     });
     return { cats: cats, overviewAdded: true };
   }
+  // 아이폰 앱에서는 앱이 대신 요청한다 (file:// 페이지의 fetch가 CORS·리디렉트에 막히는 경우가 있어서)
+  var httpSeq = 0, httpWait = {};
+  window.__httpDone = function(id, status, text){
+    var w = httpWait[id]; if(!w) return;
+    delete httpWait[id];
+    if(!status) w.rej(new Error('Failed to fetch'));
+    else if(status < 200 || status >= 300) w.rej(new Error('HTTP ' + status));
+    else w.res(text);
+  };
+  function nativeHttp(url, opt){
+    return new Promise(function(res, rej){
+      var id = ++httpSeq;
+      httpWait[id] = { res: res, rej: rej };
+      setTimeout(function(){ if(httpWait[id]){ delete httpWait[id]; var e = new Error('timeout'); e.name = 'AbortError'; rej(e); } }, 60000);
+      window.webkit.messageHandlers.board.postMessage({ type:'http', id: id, url: url, method: opt.method, body: opt.body == null ? undefined : opt.body });
+    });
+  }
   function syncFetch(url, opt){
+    if(nativeApp && window.__boardApp && window.__boardApp.http) return nativeHttp(url, opt).then(parseSync);
     var ctl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function(){ if(ctl) ctl.abort(); }, 60000);
     if(ctl) opt.signal = ctl.signal;
     return fetch(url, opt).then(function(r){
       if(!r.ok) throw new Error('HTTP ' + r.status);
       return r.text();
-    }).then(function(t){
-      var j;
-      try{ j = JSON.parse(t); }catch(e){ throw new Error('시트 응답을 읽지 못했습니다. 주소와 배포 설정(액세스: 모든 사용자)을 확인하세요.'); }
-      if(!j || !j.ok) throw new Error((j && j.error) || '시트 오류');
-      return j;
-    }).finally(function(){ clearTimeout(timer); });
+    }).then(parseSync).finally(function(){ clearTimeout(timer); });
+  }
+  function parseSync(t){
+    var j;
+    try{ j = JSON.parse(t); }catch(e){ throw new Error('시트 응답을 읽지 못했습니다. 배포 설정의 액세스 권한이 \'모든 사용자\'인지 확인하세요. (\'Google 계정이 있는 모든 사용자\'가 아님)'); }
+    if(!j || !j.ok) throw new Error((j && j.error) || '시트 오류');
+    return j;
   }
   function syncErr(e){
     var m = e && e.name === 'AbortError' ? '시간 초과: 인터넷 연결을 확인하세요.' : (e && e.message) || '연결 실패';
-    if(m === 'Failed to fetch' || m === 'Load failed') m = '연결 실패: 인터넷 연결과 시트 연결 주소를 확인하세요.';
+    if(m === 'Failed to fetch' || m === 'Load failed') m = '연결 실패: 인터넷 연결, 시트 연결 주소, 배포 설정의 액세스 권한(\'모든 사용자\')을 확인하세요.';
     setSyncState(m, true);
   }
   $('syncDown').addEventListener('click', function(){
