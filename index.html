@@ -52,7 +52,7 @@
   .sync-btns .big-btn{flex:1;padding:14px;font-size:15px;}
   .big-btn.alt{background:transparent;border:1.5px solid var(--accent);color:var(--accent);}
   .sync-btns .big-btn:disabled{opacity:.45;}
-  .sync-state{font-size:12.5px;color:var(--muted);min-height:18px;margin-bottom:10px;white-space:pre-line;}
+  .sync-state{margin-top:10px;font-size:12.5px;color:var(--muted);min-height:18px;margin-bottom:10px;white-space:pre-line;}
   .sync-state.err{color:var(--danger);}
   #galImport{margin-bottom:10px;background:transparent;border:1.5px solid var(--accent);color:var(--accent);padding:13px;font-size:15px;}
   .gal-empty{grid-column:1/-1;padding:30px 10px;text-align:center;color:var(--muted);font-size:13px;}
@@ -477,7 +477,7 @@
             <span class="nt">시설물 종류 관리</span><span class="nv" id="navCatVal"></span><span class="ar">›</span>
           </button>
           <button class="nav-row" id="navSync">
-            <span class="nt">목록 백업 (구글 시트)</span><span class="nv" id="navSyncVal"></span><span class="ar">›</span>
+            <span class="nt">계정 · 데이터 백업</span><span class="nv" id="navSyncVal"></span><span class="ar">›</span>
           </button>
           <button class="nav-row" id="navUi">
             <span class="nt">화면 설정 (크기 · 색 · 간격)</span><span class="ar">›</span>
@@ -548,21 +548,33 @@
   </div>
 </div>
 
-<!-- ============ 목록 백업 (구글 시트) ============ -->
+<!-- ============ 계정 · 데이터 백업 (Firebase) ============ -->
 <div class="screen" id="scrSync">
-  <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>목록 백업 (구글 시트)</h2></div>
+  <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>계정 · 데이터 백업</h2></div>
   <div class="scr-body">
-    <div class="hintline">시설물 종류 · 부재명 · 손상명 · 시설명 목록을 구글 시트와 주고받습니다. 시트에서 표로 고친 뒤 [내려받기]를 누르면 앱에 반영되고, [올리기]를 누르면 앱 목록이 시트에 백업됩니다.</div>
-    <div class="sec">
-      <div class="t">시트 연결 주소 (Apps Script 웹 앱 URL)</div>
-      <div class="add-row"><input type="url" id="syncUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div id="acctOut">
+      <div class="hintline">로그인하면 시설물 종류 · 부재명 · 손상명 · 시설명 · 위치 양식과 보드판 · 화면 설정을 클라우드에 백업하고, 다른 기기나 앱을 다시 설치한 뒤에도 불러올 수 있습니다.</div>
+      <div class="sec">
+        <div class="t">이메일</div>
+        <div class="add-row"><input type="email" id="acctEmail" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+        <div class="t" style="margin-top:10px">비밀번호</div>
+        <div class="add-row"><input type="password" id="acctPw" autocomplete="current-password"></div>
+      </div>
+      <div class="sync-btns"><button class="big-btn" id="acctLogin" type="button">로그인</button></div>
     </div>
-    <div class="sync-btns">
-      <button class="big-btn alt" id="syncDown" type="button">시트에서 내려받기</button>
-      <button class="big-btn" id="syncUp" type="button">시트로 올리기</button>
+    <div id="acctIn">
+      <div class="card">
+        <div class="setrow"><span>로그인 계정</span><b id="acctWho"></b></div>
+        <div class="setrow"><span>마지막 백업</span><b id="acctLast"></b></div>
+        <label class="setrow"><span>바뀐 내용 자동 백업 (앱을 나갈 때)</span><input type="checkbox" id="acctAuto"></label>
+      </div>
+      <div class="sync-btns">
+        <button class="big-btn alt" id="syncDown" type="button">클라우드에서 불러오기</button>
+        <button class="big-btn" id="syncUp" type="button">지금 백업</button>
+      </div>
+      <div class="chips"><button class="chip warn" id="acctOutBtn" type="button">로그아웃</button></div>
     </div>
     <div class="sync-state" id="syncState"></div>
-    <div class="hintline">위치 양식과 최근 위치는 앱에 그대로 남습니다(부재명이 같으면 유지). 시트에서 지운 부재·손상은 앱에서도 지워집니다.</div>
   </div>
 </div>
 
@@ -3009,194 +3021,170 @@
   }
   $('navUi').addEventListener('click', function(){ renderUiScreen(); showScreen('scrUi'); });
 
-  /* ================= 목록 백업 (구글 시트) =================
-     시트에 붙인 Apps Script 웹 앱과 주고받는다 (sheet-sync.gs).
-     시트 '목록' 탭: 시설물 종류 | 부재명 | 손상명 (한 줄에 손상 하나)
-     시트 '시설명' 탭: 시설물 종류 | 시설명
-     숨김 '_앱백업' 탭: 위치 양식까지 담은 앱 목록 전체(JSON) */
-  var sync = load('bd_sync', { url:'', at:'', dir:'' });
-  function saveSync(){ save('bd_sync', sync); }
-  function syncLabel(){
-    if(!sync.url) return '연결 안 됨';
-    if(!sync.at) return '연결됨';
-    var d = new Date(sync.at);
-    return (sync.dir === 'up' ? '올림 ' : '받음 ') + pad2(d.getMonth() + 1) + '.' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
-  }
+  /* ================= 계정 · 데이터 백업 (Firebase) =================
+     보드판 전용 Firebase 프로젝트: 이메일 로그인 + Firestore 문서 fieldboard/{로그인 uid}
+     data 칸에 앱 목록·설정 전체(JSON). 다른 사람은 규칙상 읽지도 쓰지도 못한다.
+     apiKey·projectId는 공개돼도 되는 값 (보안은 Firestore 규칙이 맡는다) */
+  var FB = { apiKey: '', projectId: '', col: 'fieldboard' };
+  var acct = load('bd_acct', {});   // { email, uid, idToken, refreshToken, expiresAt, at(마지막 백업), auto, dirty }
+  function saveAcct(){ save('bd_acct', acct); }
+  var sync = acct;                  // 홈 화면 표시용
+  function fbReady(){ return !!(FB.apiKey && FB.projectId); }
+  function loggedIn(){ return !!(acct.uid && acct.refreshToken); }
+  function fmtAt(t){ var d = new Date(t); return pad2(d.getMonth() + 1) + '.' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+  function syncLabel(){ return !loggedIn() ? '로그인 안 됨' : acct.at ? '백업 ' + fmtAt(acct.at) : '로그인됨'; }
   function setSyncState(msg, err){ var el = $('syncState'); el.textContent = msg || ''; el.classList.toggle('err', !!err); }
-  function syncBusy(on){ $('syncDown').disabled = $('syncUp').disabled = on; }
-  function syncUrl(){
-    var u = $('syncUrl').value.trim();
-    if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(u)){ setSyncState('시트 연결 주소를 넣어 주세요 (https://script.google.com/macros/s/…/exec)', true); return null; }
-    if(u !== sync.url){ sync.url = u; saveSync(); }
-    return u;
-  }
-  $('navSync').addEventListener('click', function(){
-    $('syncUrl').value = sync.url || '';
-    setSyncState(sync.at ? '마지막: ' + syncLabel() : '');
-    syncBusy(false);
-    showScreen('scrSync');
-  });
-  $('syncUrl').addEventListener('change', function(){ syncUrl(); });
+  function syncBusy(on){ ['syncDown', 'syncUp', 'acctLogin'].forEach(function(id){ $(id).disabled = on; }); }
 
-  // 앱 목록 → 시트 행
-  function treeToRows(t){
-    var list = [], sites = [];
-    t.cats.forEach(function(c){
-      if(!c.members.length) list.push([c.name, '', '']);
-      c.members.forEach(function(m){
-        if(!m.notes.length) list.push([c.name, m.name, '']);
-        m.notes.forEach(function(n){ list.push([c.name, m.name, n]); });
-      });
-      c.sites.forEach(function(x){ sites.push([c.name, x]); });
-    });
-    var b = JSON.parse(JSON.stringify(t));
-    b.cats.forEach(function(c){ c.members.forEach(function(m){ delete m.recent; }); });
-    // cats·siteMap: 종류별 탭 시트용 / list·sites: 예전 '목록' 탭 스크립트용
-    var siteMap = {};
-    t.cats.forEach(function(c){ siteMap[c.name] = c.sites.slice(); });
-    return { cats: t.cats.map(function(c){ return { name: c.name, members: c.members.map(function(m){ return { name: m.name, notes: m.notes.slice() }; }) }; }),
-             siteMap: siteMap, list: list, sites: sites, backup: JSON.stringify(b) };
-  }
-  // 시트 행 → 앱 목록. 위치 양식·최근 위치·공통 손상은 같은 이름이 있으면 지금 앱(없으면 시트 백업) 것을 이어 쓴다
-  function rowsToTree(d){
-    var cell = function(v){ return String(v == null ? '' : v).trim(); };
-    // 종류별 탭 시트 → 예전 행 형식으로 바꿔 같은 방식으로 합친다
-    if(Array.isArray(d.cats)){
-      var list = [], srows = null;
-      d.cats.forEach(function(c){
-        if(!c.members || !c.members.length) list.push([c.name, '', '']);
-        (c.members || []).forEach(function(m){
-          if(!m.notes || !m.notes.length) list.push([c.name, m.name, '']);
-          (m.notes || []).forEach(function(n){ list.push([c.name, m.name, n]); });
-        });
-      });
-      if(d.sites && typeof d.sites === 'object'){
-        srows = [];
-        Object.keys(d.sites).forEach(function(k){ (d.sites[k] || []).forEach(function(x){ srows.push([k, x]); }); });
-      }
-      d = { list: list, sites: srows, backup: d.backup };
-    }
-    var prev = [tree];
-    try{ var bk = d.backup ? JSON.parse(d.backup) : null; if(bk && bk.cats) prev.push(bk); }catch(e){}
-    function oldCat(name){
-      for(var i = 0; i < prev.length; i++){ var c = prev[i].cats.filter(function(x){ return x.name === name; })[0]; if(c) return c; }
-      return null;
-    }
-    function oldMember(cat, name){
-      for(var i = 0; i < prev.length; i++){
-        var c = prev[i].cats.filter(function(x){ return x.name === cat; })[0];
-        var m = c && (c.members || []).filter(function(x){ return x.name === name; })[0];
-        if(m) return m;
-      }
-      return null;
-    }
-    var cats = [], byName = {};
-    function getCat(name){
-      if(!byName[name]){
-        var oc = oldCat(name);
-        byName[name] = { name: name, sites: [], common: oc && oc.common ? oc.common.slice() : ['상태양호'], members: [], _m: {} };
-        cats.push(byName[name]);
-      }
-      return byName[name];
-    }
-    (d.list || []).forEach(function(r){
-      var cn = cell(r[0]), mn = cell(r[1]), nn = cell(r[2]);
-      if(!cn) return;
-      var c = getCat(cn);
-      if(!mn) return;
-      var m = c._m[mn];
-      if(!m){
-        var om = oldMember(cn, mn);
-        m = { name: mn, notes: [], forms: om && om.forms ? om.forms.slice() : (FORM_MAP[mn] || []).slice(),
-              locMode: om && om.locMode ? om.locMode : null, recent: om && om.recent ? om.recent.slice() : [] };
-        if(!m.locMode) m.locMode = m.forms.length ? 'form' : 'free';
-        c._m[mn] = m; c.members.push(m);
-      }
-      if(nn && m.notes.indexOf(nn) < 0) m.notes.push(nn);
-    });
-    if(!cats.length) return null;
-    var hasSites = Array.isArray(d.sites);
-    cats.forEach(function(c){
-      delete c._m;
-      if(!hasSites){ var oc = oldCat(c.name); c.sites = oc && oc.sites ? oc.sites.slice() : []; }
-    });
-    if(hasSites) d.sites.forEach(function(r){
-      var c = byName[cell(r[0])], x = cell(r[1]);
-      if(c && x && c.sites.indexOf(x) < 0) c.sites.push(x);
-    });
-    return { cats: cats, overviewAdded: true };
-  }
-  // 아이폰 앱에서는 앱이 대신 요청한다 (file:// 페이지의 fetch가 CORS·리디렉트에 막히는 경우가 있어서)
+  // 아이폰 앱에서는 앱이 대신 요청한다 (file:// 페이지의 fetch가 CORS에 막히는 경우가 있어서)
   var httpSeq = 0, httpWait = {};
   window.__httpDone = function(id, status, text){
     var w = httpWait[id]; if(!w) return;
     delete httpWait[id];
-    if(!status) w.rej(new Error('Failed to fetch'));
-    else if(status < 200 || status >= 300) w.rej(new Error('HTTP ' + status));
-    else w.res(text);
+    if(!status) w.rej(new Error('Failed to fetch')); else w.res({ status: status, text: text || '' });
   };
-  function nativeHttp(url, opt){
-    return new Promise(function(res, rej){
+  function http(url, method, headers, body){
+    if(nativeApp && window.__boardApp && window.__boardApp.http) return new Promise(function(res, rej){
       var id = ++httpSeq;
       httpWait[id] = { res: res, rej: rej };
-      setTimeout(function(){ if(httpWait[id]){ delete httpWait[id]; var e = new Error('timeout'); e.name = 'AbortError'; rej(e); } }, 60000);
-      window.webkit.messageHandlers.board.postMessage({ type:'http', id: id, url: url, method: opt.method, body: opt.body == null ? undefined : opt.body });
+      setTimeout(function(){ if(httpWait[id]){ delete httpWait[id]; var e = new Error('timeout'); e.name = 'AbortError'; rej(e); } }, 45000);
+      window.webkit.messageHandlers.board.postMessage({ type:'http', id: id, url: url, method: method,
+        headers: headers || {}, body: body == null ? undefined : body });
+    });
+    return fetch(url, { method: method, headers: headers || {}, body: body, cache:'no-store' }).then(function(r){
+      return r.text().then(function(t){ return { status: r.status, text: t }; });
     });
   }
-  function syncFetch(url, opt){
-    if(nativeApp && window.__boardApp && window.__boardApp.http) return nativeHttp(url, opt).then(parseSync);
-    var ctl = window.AbortController ? new AbortController() : null;
-    var timer = setTimeout(function(){ if(ctl) ctl.abort(); }, 60000);
-    if(ctl) opt.signal = ctl.signal;
-    return fetch(url, opt).then(function(r){
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      return r.text();
-    }).then(parseSync).finally(function(){ clearTimeout(timer); });
+  function jsonOf(r){ try{ return JSON.parse(r.text); }catch(e){ return {}; } }
+  function fbErr(r){
+    var j = jsonOf(r), m = (j.error && (j.error.message || j.error.status)) || ('HTTP ' + r.status);
+    if(/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND|INVALID_EMAIL/.test(m)) return '이메일 또는 비밀번호가 맞지 않습니다.';
+    if(/TOO_MANY_ATTEMPTS/.test(m)) return '로그인 시도가 너무 많습니다. 잠시 후 다시 해 주세요.';
+    if(/USER_DISABLED/.test(m)) return '사용이 중지된 계정입니다.';
+    if(/OPERATION_NOT_ALLOWED/.test(m)) return 'Firebase에서 이메일/비밀번호 로그인이 꺼져 있습니다.';
+    if(/API key|API_KEY/i.test(m)) return 'API 키가 맞지 않거나 막혀 있습니다. (' + m + ')';
+    if(r.status === 403 || /PERMISSION_DENIED/.test(m)) return '클라우드 저장 권한이 없습니다. Firestore 규칙을 확인하세요.';
+    return m;
   }
-  function parseSync(t){
-    var j;
-    try{ j = JSON.parse(t); }catch(e){ throw new Error('시트 응답을 읽지 못했습니다. 배포 설정의 액세스 권한이 \'모든 사용자\'인지 확인하세요. (\'Google 계정이 있는 모든 사용자\'가 아님)'); }
-    if(!j || !j.ok) throw new Error((j && j.error) || '시트 오류');
-    return j;
+  function errText(e){
+    if(e && e.name === 'AbortError') return '시간 초과: 인터넷 연결을 확인하세요.';
+    var m = (e && e.message) || '연결 실패';
+    return (m === 'Failed to fetch' || m === 'Load failed') ? '연결 실패: 인터넷 연결을 확인하세요.' : m;
   }
-  function syncErr(e){
-    var m = e && e.name === 'AbortError' ? '시간 초과: 인터넷 연결을 확인하세요.' : (e && e.message) || '연결 실패';
-    if(m === 'Failed to fetch' || m === 'Load failed') m = '연결 실패: 인터넷 연결, 시트 연결 주소, 배포 설정의 액세스 권한(\'모든 사용자\')을 확인하세요.';
-    else if(/^HTTP (401|403)$/.test(m)) m = m + ': 시트 접근이 막혔습니다. Apps Script [배포 관리]에서 액세스 권한을 \'모든 사용자\'로 바꾸고 새 버전으로 배포하세요.';
-    else if(m === 'HTTP 404') m = 'HTTP 404: 시트 연결 주소가 맞지 않습니다. 배포 후 나온 웹 앱 URL(…/exec)을 다시 복사해 넣으세요.';
-    setSyncState(m, true);
+
+  function signIn(email, pw){
+    return http('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + FB.apiKey, 'POST',
+      { 'Content-Type':'application/json' }, JSON.stringify({ email: email, password: pw, returnSecureToken: true })).then(function(r){
+      if(r.status !== 200) throw new Error(fbErr(r));
+      var d = jsonOf(r);
+      acct = { email: d.email, uid: d.localId, idToken: d.idToken, refreshToken: d.refreshToken,
+               expiresAt: Date.now() + (Number(d.expiresIn || 3600) - 60) * 1000, auto: acct.auto !== false };
+      sync = acct; saveAcct();
+    });
   }
-  $('syncDown').addEventListener('click', function(){
-    var url = syncUrl(); if(!url) return;
-    syncBusy(true); setSyncState('시트에서 받는 중…');
-    syncFetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), { method:'GET', cache:'no-store' }).then(function(d){
-      var t = rowsToTree(d);
-      if(!t){ setSyncState('시트에 목록이 없습니다. 먼저 [시트로 올리기]를 해 주세요.', true); return; }
-      var nm = 0, nn = 0;
-      t.cats.forEach(function(c){ nm += c.members.length; c.members.forEach(function(m){ nn += m.notes.length; }); });
-      if(!confirm('시트 목록으로 바꿀까요?\n시설물 종류 ' + t.cats.length + '개 · 부재 ' + nm + '개 · 손상 ' + nn + '개\n(지금 앱 목록은 시트 내용으로 바뀝니다)')){ setSyncState(''); return; }
-      tree = normalize(t);
-      // 지금 고른 종류·부재·손상이 시트에서 없어졌으면 비운다 (종류가 바뀌면 시설명도)
-      if(!curCat() || curCat().name !== values.cat){ values.cat = tree.cats[0].name; values.site = ''; values.member = ''; values.note = ''; values.loc = ''; }
-      else if(values.member && !curMember()){ values.member = ''; values.note = ''; values.loc = ''; }
-      else if(values.note && noteHolder().arr.indexOf(values.note) < 0) values.note = '';
-      saveTree(); saveValues();
-      sync.at = new Date().toISOString(); sync.dir = 'down'; saveSync();
-      setSyncState('받았습니다 · 시설물 종류 ' + t.cats.length + '개 · 부재 ' + nm + '개 · 손상 ' + nn + '개');
-      refreshAll();
-    }).catch(syncErr).then(function(){ syncBusy(false); });
+  function signOut(){ acct = { email: acct.email, auto: acct.auto }; sync = acct; saveAcct(); }
+  // 로그인 토큰은 1시간마다 만료 → 갱신 토큰으로 조용히 다시 받는다
+  function idToken(){
+    if(!loggedIn()) return Promise.reject(new Error('로그인이 필요합니다.'));
+    if(acct.idToken && Date.now() < (acct.expiresAt || 0)) return Promise.resolve(acct.idToken);
+    return http('https://securetoken.googleapis.com/v1/token?key=' + FB.apiKey, 'POST',
+      { 'Content-Type':'application/x-www-form-urlencoded' }, 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(acct.refreshToken)).then(function(r){
+      if(r.status !== 200){
+        if(r.status === 400){ signOut(); renderAcct(); throw new Error('로그인이 만료되었습니다. 다시 로그인하세요.'); }
+        throw new Error(fbErr(r));
+      }
+      var d = jsonOf(r);
+      acct.idToken = d.id_token; acct.refreshToken = d.refresh_token || acct.refreshToken;
+      acct.expiresAt = Date.now() + (Number(d.expires_in || 3600) - 60) * 1000;
+      saveAcct();
+      return acct.idToken;
+    });
+  }
+  function docUrl(){
+    return 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(FB.projectId) + '/databases/(default)/documents/' +
+      FB.col + '/' + encodeURIComponent(acct.uid);
+  }
+  function backupData(){ return JSON.stringify({ v: 1, tree: tree, settings: settings, ui: ui }); }
+  function cloudPush(){
+    var data = backupData(), now = Date.now();
+    return idToken().then(function(tok){
+      return http(docUrl(), 'PATCH', { 'Content-Type':'application/json', 'Authorization':'Bearer ' + tok },
+        JSON.stringify({ fields: { data: { stringValue: data }, savedAt: { integerValue: String(now) } } }));
+    }).then(function(r){
+      if(r.status !== 200) throw new Error(fbErr(r));
+      acct.at = now; acct.dirty = false; saveAcct(); lastSnap = data;
+      return now;
+    });
+  }
+  function cloudPull(){
+    return idToken().then(function(tok){ return http(docUrl(), 'GET', { 'Authorization':'Bearer ' + tok }); }).then(function(r){
+      if(r.status === 404) return null;
+      if(r.status !== 200) throw new Error(fbErr(r));
+      var f = jsonOf(r).fields || {}, d = null;
+      try{ d = JSON.parse((f.data && f.data.stringValue) || 'null'); }catch(e){}
+      if(!d || !d.tree || !d.tree.cats || !d.tree.cats.length) return null;
+      d.savedAt = f.savedAt ? Number(f.savedAt.integerValue) : 0;
+      return d;
+    });
+  }
+
+  function renderAcct(){
+    var on = loggedIn();
+    $('acctOut').style.display = on ? 'none' : '';
+    $('acctIn').style.display = on ? '' : 'none';
+    $('acctEmail').value = acct.email || '';
+    $('acctPw').value = '';
+    $('acctWho').textContent = acct.email || '';
+    $('acctLast').textContent = acct.at ? fmtAt(acct.at) : '아직 없음';
+    $('acctAuto').checked = acct.auto !== false;
+    if(!fbReady()) setSyncState('클라우드 연결 설정이 아직 앱에 들어 있지 않습니다.', true);
+    renderHome();
+  }
+  $('navSync').addEventListener('click', function(){ setSyncState(''); syncBusy(false); renderAcct(); showScreen('scrSync'); });
+  $('acctLogin').addEventListener('click', function(){
+    if(!fbReady()){ setSyncState('클라우드 연결 설정이 아직 앱에 들어 있지 않습니다.', true); return; }
+    var em = $('acctEmail').value.trim(), pw = $('acctPw').value;
+    if(!em || !pw){ setSyncState('이메일과 비밀번호를 넣어 주세요.', true); return; }
+    syncBusy(true); setSyncState('로그인 중…');
+    signIn(em, pw).then(function(){
+      renderAcct(); setSyncState('로그인했습니다. 클라우드 백업을 확인하는 중…');
+      return cloudPull().then(function(d){
+        if(!d) return cloudPush().then(function(){ renderAcct(); setSyncState('로그인했습니다. 이 기기 목록을 첫 백업으로 올렸습니다.'); });
+        setSyncState('로그인했습니다. 클라우드에 ' + fmtAt(d.savedAt) + ' 백업이 있습니다. 그 내용으로 바꾸려면 [클라우드에서 불러오기]를 누르세요.');
+      });
+    }).catch(function(e){ setSyncState(errText(e), true); }).then(function(){ syncBusy(false); });
   });
+  $('acctOutBtn').addEventListener('click', function(){
+    if(!confirm('로그아웃할까요? (이 기기의 목록은 그대로 남습니다)')) return;
+    signOut(); setSyncState(''); renderAcct();
+  });
+  $('acctAuto').addEventListener('change', function(){ acct.auto = this.checked; saveAcct(); });
   $('syncUp').addEventListener('click', function(){
-    var url = syncUrl(); if(!url) return;
-    if(!confirm('앱 목록을 시트에 올릴까요?\n시트의 시설물 종류 탭과 시설명 탭이 앱 목록으로 덮어써집니다.')) return;
-    syncBusy(true); setSyncState('시트로 올리는 중…');
-    // text/plain으로 보내야 Apps Script가 사전 요청(CORS preflight) 없이 받는다
-    syncFetch(url, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(treeToRows(tree)) }).then(function(){
-      sync.at = new Date().toISOString(); sync.dir = 'up'; saveSync();
-      setSyncState('올렸습니다 · ' + syncLabel());
-      renderHome();
-    }).catch(syncErr).then(function(){ syncBusy(false); });
+    syncBusy(true); setSyncState('백업 중…');
+    cloudPush().then(function(){ renderAcct(); setSyncState('백업했습니다 · ' + fmtAt(acct.at)); })
+      .catch(function(e){ setSyncState(errText(e), true); }).then(function(){ syncBusy(false); });
   });
+  $('syncDown').addEventListener('click', function(){
+    syncBusy(true); setSyncState('클라우드에서 받는 중…');
+    cloudPull().then(function(d){
+      if(!d){ setSyncState('클라우드에 백업이 없습니다. 먼저 [지금 백업]을 눌러 주세요.', true); return; }
+      var nm = 0, nn = 0;
+      d.tree.cats.forEach(function(c){ (c.members || []).forEach(function(m){ nm++; nn += (m.notes || []).length; }); });
+      if(!confirm(fmtAt(d.savedAt) + ' 백업으로 바꿀까요?\n시설물 종류 ' + d.tree.cats.length + '개 · 부재 ' + nm + '개 · 손상 ' + nn + '개 + 보드판·화면 설정\n(이 기기의 목록·설정이 백업 내용으로 바뀝니다)')){ setSyncState(''); return; }
+      save('bd_tree', d.tree);
+      if(d.settings) save('bd_settings', d.settings);
+      if(d.ui) save('bd_ui', d.ui);
+      acct.dirty = false; saveAcct();
+      location.reload();
+    }).catch(function(e){ setSyncState(errText(e), true); }).then(function(){ syncBusy(false); });
+  });
+  // 자동 백업: 목록·설정이 바뀌었으면 앱을 나갈 때(화면이 가려질 때) 올린다
+  var lastSnap = backupData();
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden || !fbReady() || !loggedIn() || acct.auto === false) return;
+    if(backupData() !== lastSnap || acct.dirty){ acct.dirty = true; saveAcct(); cloudPush().catch(function(){}); }
+  });
+
   $('uiReset').addEventListener('click', function(){
     if(!confirm('화면 설정을 기본값으로 되돌릴까요?')) return;
     ui = {}; save('bd_ui', ui); applyUi(); renderUiScreen();

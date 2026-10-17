@@ -120,9 +120,9 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         DispatchQueue.main.async { self.webView.evaluateJavaScript(code) }
     }
 
-    // MARK: - 구글 시트 연동 요청 (웹뷰 fetch는 file:// 페이지라 CORS·리디렉트에 막힐 수 있어 앱이 대신 보낸다)
+    // MARK: - 클라우드 백업 요청 (웹뷰 fetch는 file:// 페이지라 CORS에 막힐 수 있어 앱이 대신 보낸다)
 
-    private func httpRequest(id: Int, url: String, method: String, body: String?) {
+    private func httpRequest(id: Int, url: String, method: String, body: String?, headers: [String: String]?) {
         guard let u = URL(string: url), u.scheme == "https" else {
             js("window.__httpDone && __httpDone(\(id), 0, '')"); return
         }
@@ -132,6 +132,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             req.httpBody = body.data(using: .utf8)
             req.setValue("text/plain;charset=utf-8", forHTTPHeaderField: "Content-Type")
         }
+        headers?.forEach { req.setValue($0.value, forHTTPHeaderField: $0.key) }
         URLSession.shared.dataTask(with: req) { data, response, _ in
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             let text = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
@@ -187,7 +188,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         case "camBias": setBias(Float(body["bias"] as? Double ?? 0))
         case "http":
             httpRequest(id: body["id"] as? Int ?? 0, url: body["url"] as? String ?? "",
-                        method: body["method"] as? String ?? "GET", body: body["body"] as? String)
+                        method: body["method"] as? String ?? "GET", body: body["body"] as? String,
+                        headers: body["headers"] as? [String: String])
         case "openPhotos":
             if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
         case "camZoom":
