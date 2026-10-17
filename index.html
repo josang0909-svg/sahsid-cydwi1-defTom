@@ -3025,7 +3025,7 @@
      보드판 전용 Firebase 프로젝트: 이메일 로그인 + Firestore 문서 fieldboard/{로그인 uid}
      data 칸에 앱 목록·설정 전체(JSON). 다른 사람은 규칙상 읽지도 쓰지도 못한다.
      apiKey·projectId는 공개돼도 되는 값 (보안은 Firestore 규칙이 맡는다) */
-  var FB = { apiKey: '', projectId: '', col: 'fieldboard' };
+  var FB = { apiKey: 'AIzaSyBpcVG85oHMcNcIg223Cr6Bb01Ozj80_KQ', projectId: 'field-board-62024', col: 'fieldboard' };
   var acct = load('bd_acct', {});   // { email, uid, idToken, refreshToken, expiresAt, at(마지막 백업), auto, dirty }
   function saveAcct(){ save('bd_acct', acct); }
   var sync = acct;                  // 홈 화면 표시용
