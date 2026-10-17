@@ -3051,11 +3051,31 @@
     });
     var b = JSON.parse(JSON.stringify(t));
     b.cats.forEach(function(c){ c.members.forEach(function(m){ delete m.recent; }); });
-    return { list: list, sites: sites, backup: JSON.stringify(b) };
+    // cats·siteMap: 종류별 탭 시트용 / list·sites: 예전 '목록' 탭 스크립트용
+    var siteMap = {};
+    t.cats.forEach(function(c){ siteMap[c.name] = c.sites.slice(); });
+    return { cats: t.cats.map(function(c){ return { name: c.name, members: c.members.map(function(m){ return { name: m.name, notes: m.notes.slice() }; }) }; }),
+             siteMap: siteMap, list: list, sites: sites, backup: JSON.stringify(b) };
   }
   // 시트 행 → 앱 목록. 위치 양식·최근 위치·공통 손상은 같은 이름이 있으면 지금 앱(없으면 시트 백업) 것을 이어 쓴다
   function rowsToTree(d){
     var cell = function(v){ return String(v == null ? '' : v).trim(); };
+    // 종류별 탭 시트 → 예전 행 형식으로 바꿔 같은 방식으로 합친다
+    if(Array.isArray(d.cats)){
+      var list = [], srows = null;
+      d.cats.forEach(function(c){
+        if(!c.members || !c.members.length) list.push([c.name, '', '']);
+        (c.members || []).forEach(function(m){
+          if(!m.notes || !m.notes.length) list.push([c.name, m.name, '']);
+          (m.notes || []).forEach(function(n){ list.push([c.name, m.name, n]); });
+        });
+      });
+      if(d.sites && typeof d.sites === 'object'){
+        srows = [];
+        Object.keys(d.sites).forEach(function(k){ (d.sites[k] || []).forEach(function(x){ srows.push([k, x]); }); });
+      }
+      d = { list: list, sites: srows, backup: d.backup };
+    }
     var prev = [tree];
     try{ var bk = d.backup ? JSON.parse(d.backup) : null; if(bk && bk.cats) prev.push(bk); }catch(e){}
     function oldCat(name){
@@ -3151,7 +3171,7 @@
     syncBusy(true); setSyncState('시트에서 받는 중…');
     syncFetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), { method:'GET', cache:'no-store' }).then(function(d){
       var t = rowsToTree(d);
-      if(!t){ setSyncState('시트 \'목록\' 탭이 비어 있습니다. 먼저 [시트로 올리기]를 해 주세요.', true); return; }
+      if(!t){ setSyncState('시트에 목록이 없습니다. 먼저 [시트로 올리기]를 해 주세요.', true); return; }
       var nm = 0, nn = 0;
       t.cats.forEach(function(c){ nm += c.members.length; c.members.forEach(function(m){ nn += m.notes.length; }); });
       if(!confirm('시트 목록으로 바꿀까요?\n시설물 종류 ' + t.cats.length + '개 · 부재 ' + nm + '개 · 손상 ' + nn + '개\n(지금 앱 목록은 시트 내용으로 바뀝니다)')){ setSyncState(''); return; }
@@ -3168,7 +3188,7 @@
   });
   $('syncUp').addEventListener('click', function(){
     var url = syncUrl(); if(!url) return;
-    if(!confirm('앱 목록을 시트에 올릴까요?\n시트의 목록 · 시설명 탭이 앱 목록으로 덮어써집니다.')) return;
+    if(!confirm('앱 목록을 시트에 올릴까요?\n시트의 시설물 종류 탭과 시설명 탭이 앱 목록으로 덮어써집니다.')) return;
     syncBusy(true); setSyncState('시트로 올리는 중…');
     // text/plain으로 보내야 Apps Script가 사전 요청(CORS preflight) 없이 받는다
     syncFetch(url, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(treeToRows(tree)) }).then(function(){
