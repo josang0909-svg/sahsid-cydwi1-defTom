@@ -3043,8 +3043,13 @@
     delete httpWait[id];
     if(!status) w.rej(new Error('Failed to fetch')); else w.res({ status: status, text: text || '' });
   };
+  // 앱 1.0.29부터 헤더(로그인 토큰)를 함께 보낸다. 그 전 앱은 웹뷰 fetch로 (Firebase는 CORS 허용)
+  function appSendsHeaders(){
+    var v = String((window.__boardApp && window.__boardApp.version) || '').split('.').map(Number);
+    return (v[0] || 0) * 1e6 + (v[1] || 0) * 1e3 + (v[2] || 0) >= 1000029;
+  }
   function http(url, method, headers, body){
-    if(nativeApp && window.__boardApp && window.__boardApp.http) return new Promise(function(res, rej){
+    if(nativeApp && window.__boardApp && window.__boardApp.http && appSendsHeaders()) return new Promise(function(res, rej){
       var id = ++httpSeq;
       httpWait[id] = { res: res, rej: rej };
       setTimeout(function(){ if(httpWait[id]){ delete httpWait[id]; var e = new Error('timeout'); e.name = 'AbortError'; rej(e); } }, 45000);
