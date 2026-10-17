@@ -3142,6 +3142,8 @@
   function syncErr(e){
     var m = e && e.name === 'AbortError' ? '시간 초과: 인터넷 연결을 확인하세요.' : (e && e.message) || '연결 실패';
     if(m === 'Failed to fetch' || m === 'Load failed') m = '연결 실패: 인터넷 연결, 시트 연결 주소, 배포 설정의 액세스 권한(\'모든 사용자\')을 확인하세요.';
+    else if(/^HTTP (401|403)$/.test(m)) m = m + ': 시트 접근이 막혔습니다. Apps Script [배포 관리]에서 액세스 권한을 \'모든 사용자\'로 바꾸고 새 버전으로 배포하세요.';
+    else if(m === 'HTTP 404') m = 'HTTP 404: 시트 연결 주소가 맞지 않습니다. 배포 후 나온 웹 앱 URL(…/exec)을 다시 복사해 넣으세요.';
     setSyncState(m, true);
   }
   $('syncDown').addEventListener('click', function(){
