@@ -168,7 +168,11 @@
   .opt{display:flex;align-items:center;gap:2px;padding:4px 8px 4px 2px;border-bottom:1px solid rgba(255,255,255,0.06);background:var(--card);}
   .opt:last-child{border-bottom:none;}
   .opt.on{background:rgba(182,146,123,0.14);}
-  .opt.dragging{background:var(--card-2);}
+  .opt.dragging{background:var(--card-2);position:relative;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,0.45);border-radius:8px;}
+  .editor.sorting{overflow:visible;}
+  .editor.sorting .opt{-webkit-user-select:none;user-select:none;}
+  .editor.sorting .opt:not(.dragging){transition:transform .15s ease;}
+  .opt{-webkit-touch-callout:none;}
   .opt .dh{width:36px;height:42px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;touch-action:none;}
   .opt .lbl{flex:1;min-width:0;font-size:14px;line-height:1.35;padding:12px 2px;overflow:hidden;white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere;}
   .opt .lbl small{display:block;font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -368,36 +372,24 @@
   }
   .toast.show{opacity:1;}
 
-  /* ===== 가로 화면 배치 ===== */
-  .home-wrap{display:flex;flex-direction:column;}
-  .home-main,.home-side{padding:0 calc(16px + var(--sr)) 0 calc(16px + var(--sl));}
-  .home-main{padding-top:calc(18px + var(--st));}
-  .home-side{padding-bottom:calc(30px + var(--sb));}
-  .mark.big{font-size:22px;letter-spacing:5px;padding:4px 10px;border-radius:5px;font-weight:700;}
-  .home-btns{display:flex;gap:10px;margin-top:18px;}
-  .home-main .shoot-btn{flex:1;min-width:0;justify-content:center;padding:17px;font-size:17px;border-radius:12px;}
-  .home-main .shoot-btn.alt{flex:0.7;background:var(--card);color:var(--text);border:1px solid var(--line);}
-  .home-main > *,.home-side > *{zoom:var(--zoom);}
+  /* ===== 홈: 위 제목·설정, 가운데 선택·미리보기, 아래 버튼 고정 (세로 화면) ===== */
+  #home{overflow:hidden;}
+  .home-wrap{display:flex;flex-direction:column;height:100%;max-width:640px;margin:0 auto;}
+  .home-top{flex:none;padding:calc(14px + var(--st)) calc(18px + var(--sr)) 12px calc(18px + var(--sl));border-bottom:1px solid var(--line);}
+  .home-top .hd-row{display:flex;align-items:flex-end;gap:10px;}
+  .home-top h1{flex:1;min-width:0;margin:8px 0 2px;font-size:21px;font-weight:800;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tool-btn{min-width:50px;background:transparent;border:1px solid var(--line);border-radius:var(--r-btn, 9px);padding:6px 4px 5px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--accent);}
+  .tool-btn:active{border-color:var(--accent);background:rgba(182,146,123,0.12);}
+  .tool-ico{width:18px;height:18px;display:block;}
+  .tool-nm{font-size:9.5px;font-weight:700;color:var(--text);line-height:1.2;}
+  .home-main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px calc(16px + var(--sr)) 18px calc(16px + var(--sl));}
+  .home-btns{flex:none;display:flex;gap:10px;padding:10px calc(16px + var(--sr)) calc(12px + var(--sb)) calc(16px + var(--sl));border-top:1px solid var(--line);background:var(--bg);}
+  .home-btns .shoot-btn{flex:1;min-width:0;justify-content:center;padding:17px;font-size:17px;border-radius:12px;}
+  .home-btns .shoot-btn.alt{flex:0.7;background:var(--card);color:var(--text);border:1px solid var(--line);}
+  .home-main > *,.home-top,.home-btns{zoom:var(--zoom);}
 
   @media (orientation:landscape) and (min-width:600px){
-    #home{overflow:hidden;}
-    .home-wrap{flex-direction:row;height:100%;}
-    .home-main,.home-side{flex:1 1 0;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-      padding-top:calc(16px + var(--st));padding-bottom:calc(24px + var(--sb));}
-    /* 설정·미리보기는 왼쪽, 시설물 선택·촬영 시작은 오른쪽 */
-    .home-main{padding-left:20px;display:flex;flex-direction:column;}
-    .home-side{order:-1;padding-right:20px;border-right:1px solid var(--line);}
-    .home-side > .sec:first-child{margin-top:4px;}
-    /* 홈 설정 칸: 설정 항목은 '시설명' 글씨 크기로 낮게, 미리보기까지 스크롤 없이 한 화면에 */
-    .home-side .nav-row{padding:6.5px 14px;}
-    .home-side .nav-row .nt{font-size:12.5px;}
-    .home-side > .sec + .sec{margin-top:12px;}
-    .home-side .prev-wrap{padding:8px;}
-    .home-side table.bprev td{padding:2px 8px;line-height:1.3;}
-    .home-side{padding-bottom:max(8px, var(--sb));}
-    .home-btns{margin-top:auto;position:sticky;bottom:0;}
-    .home-main .sec:last-of-type{margin-bottom:18px;}
-
     .scr-head{padding-top:calc(8px + var(--st));padding-bottom:8px;}
     .scr-body.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:24px;align-items:start;}
     .scr-body.two > .full{grid-column:1 / -1;}
@@ -446,11 +438,18 @@
 <!-- ============ 홈 ============ -->
 <div id="home">
   <div class="home-wrap">
-    <section class="home-main">
-      <div class="home-id">
-        <span class="mark big">SITE·BOARD</span>
+    <header class="home-top">
+      <span class="mark">SITE·BOARD</span>
+      <div class="hd-row">
+        <h1>현장 보드판</h1>
+        <button class="tool-btn" id="setBtn" type="button" aria-label="설정">
+          <svg class="tool-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span class="tool-nm">설정</span>
+        </button>
       </div>
+    </header>
 
+    <section class="home-main">
       <div class="sec">
         <div class="t">시설물 종류</div>
         <div class="chips" id="catChips"></div>
@@ -467,16 +466,24 @@
         </div>
       </div>
 
-      <div class="home-btns">
-        <button class="shoot-btn alt" id="galleryBtn">사진 편집</button>
-        <button class="shoot-btn" id="shootBtn">촬영 시작</button>
+      <div class="sec">
+        <div class="t">보드판 미리보기</div>
+        <div class="prev-wrap"><table class="bprev white" id="homePrev"></table></div>
       </div>
     </section>
 
-    <section class="home-side">
-      <div class="sec">
-        <div class="t">설정</div>
-        <div class="card">
+    <div class="home-btns">
+      <button class="shoot-btn alt" id="galleryBtn">사진 편집</button>
+      <button class="shoot-btn" id="shootBtn">촬영 시작</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 설정 (홈 톱니 버튼) ============ -->
+<div class="screen" id="scrSettings">
+  <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>설정</h2></div>
+  <div class="scr-body">
+    <div class="card">
           <button class="nav-row" data-go="board">
             <span class="nt">보드판 설정</span><span class="nv" id="navBoardVal"></span><span class="ar">›</span>
           </button>
@@ -493,13 +500,6 @@
             <span class="nt">화면 설정 (크기 · 색 · 간격)</span><span class="ar">›</span>
           </button>
         </div>
-      </div>
-
-      <div class="sec">
-        <div class="t">미리보기</div>
-        <div class="prev-wrap"><table class="bprev white" id="homePrev"></table></div>
-      </div>
-    </section>
   </div>
 </div>
 
@@ -1050,7 +1050,7 @@
           s.textContent = cfg.sub(item);
           lbl.appendChild(s);
         }
-        lbl.addEventListener('click', function(){ cfg.tap(item, idx); });
+        lbl.addEventListener('click', function(){ if(Date.now() - dragEnd < 450) return; cfg.tap(item, idx); });
         row.appendChild(lbl);
 
         if(cfg.rename){
@@ -1090,46 +1090,98 @@
       bindDrag();
     }
 
-    var dragIdx = null;
+    /* 순서 옮기기: ☰ 를 잡거나 줄을 길게 누른 채 끌기. 끄는 동안 다른 줄이 비켜 주고, 화면 끝에 가면 저절로 스크롤된다 */
+    var drag = null, dragEnd = 0;
     function bindDrag(){
-      container.querySelectorAll('.dh').forEach(function(h){
-        h.addEventListener('touchstart', function(e){
-          e.preventDefault();
-          dragIdx = parseInt(h.parentNode.getAttribute('data-idx'), 10);
-          h.parentNode.classList.add('dragging');
-          document.addEventListener('touchmove', onMove, {passive:false});
-          document.addEventListener('touchend', endDrag);
-          document.addEventListener('touchcancel', endDrag);
-        }, {passive:false});
+      container.querySelectorAll('.opt[data-idx]').forEach(function(row){
+        var h = row.querySelector('.dh');
+        h.addEventListener('touchstart', function(e){ e.preventDefault(); startDrag(row, e.touches[0]); }, {passive:false});
+        h.addEventListener('mousedown', function(e){ e.preventDefault(); startDrag(row, e); });
+        var lp = null, sx = 0, sy = 0;
+        row.addEventListener('touchstart', function(e){
+          if(drag || e.target.closest('.dh, .act')) return;
+          var t = e.touches[0]; sx = t.clientX; sy = t.clientY;
+          lp = setTimeout(function(){ lp = null; startDrag(row, { clientX: sx, clientY: sy }); }, 380);
+        }, {passive:true});
+        row.addEventListener('touchmove', function(e){
+          if(!lp) return;
+          var t = e.touches[0];
+          if(Math.abs(t.clientX - sx) + Math.abs(t.clientY - sy) > 8){ clearTimeout(lp); lp = null; }
+        }, {passive:true});
+        row.addEventListener('touchend', function(){ if(lp){ clearTimeout(lp); lp = null; } });
       });
     }
-    function onMove(e){
-      if(dragIdx == null) return;
-      e.preventDefault();
-      var t = e.touches[0];
-      var el = document.elementFromPoint(t.clientX, t.clientY);
-      var row = null;
-      while(el && el !== container){
-        if(el.classList && el.classList.contains('opt')){ row = el; break; }
-        el = el.parentNode;
+    function scroller(el){
+      while(el && el !== document.body){
+        var o = getComputedStyle(el).overflowY;
+        if((o === 'auto' || o === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+        el = el.parentElement;
       }
-      if(!row) return;
-      var to = parseInt(row.getAttribute('data-idx'), 10);
-      if(isNaN(to) || to === dragIdx) return;
-      var arr = cfg.arr();
-      arr.splice(to, 0, arr.splice(dragIdx, 1)[0]);
-      cfg.persist();
-      dragIdx = to;
-      draw();
-      var nr = container.querySelector('.opt[data-idx="' + to + '"]');
-      if(nr) nr.classList.add('dragging');
+      return null;
+    }
+    function startDrag(row, pt){
+      if(drag) return;
+      var rows = [].slice.call(container.querySelectorAll('.opt[data-idx]'));
+      var sc = scroller(container), st = sc ? sc.scrollTop : 0;
+      drag = { row: row, rows: rows, from: rows.indexOf(row), to: rows.indexOf(row), y0: pt.clientY, y: pt.clientY,
+               sc: sc, st0: st, h: row.offsetHeight,
+               mids: rows.map(function(r){ var b = r.getBoundingClientRect(); return b.top + st + b.height / 2; }) };
+      container.classList.add('sorting');
+      row.classList.add('dragging');
+      document.addEventListener('touchmove', onMove, {passive:false});
+      document.addEventListener('touchend', endDrag);
+      document.addEventListener('touchcancel', endDrag);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', endDrag);
+      tick();
+    }
+    function onMove(e){
+      if(!drag) return;
+      e.preventDefault();
+      drag.y = (e.touches ? e.touches[0] : e).clientY;
+      place();
+    }
+    function place(){
+      var d = drag, st = d.sc ? d.sc.scrollTop : 0;
+      var dy = d.y - d.y0 + (st - d.st0);
+      d.row.style.transform = 'translateY(' + dy + 'px)';
+      var center = d.mids[d.from] + dy, to = 0;
+      d.mids.forEach(function(m, i){ if(i !== d.from && m < center) to++; });
+      d.to = to;
+      d.rows.forEach(function(r, i){
+        if(i === d.from) return;
+        var off = (d.from < to && i > d.from && i <= to) ? -d.h : (to < d.from && i >= to && i < d.from) ? d.h : 0;
+        r.style.transform = off ? 'translateY(' + off + 'px)' : '';
+      });
+    }
+    // 손가락이 목록 위·아래 끝에 있으면 계속 스크롤
+    function tick(){
+      if(!drag) return;
+      var sc = drag.sc;
+      if(sc){
+        var b = sc.getBoundingClientRect(), edge = 56, v = 0;
+        if(drag.y < b.top + edge) v = -Math.ceil((b.top + edge - drag.y) / 5);
+        else if(drag.y > b.bottom - edge) v = Math.ceil((drag.y - (b.bottom - edge)) / 5);
+        if(v){ var before = sc.scrollTop; sc.scrollTop += v; if(sc.scrollTop !== before) place(); }
+      }
+      drag.raf = requestAnimationFrame(tick);
     }
     function endDrag(){
       document.removeEventListener('touchmove', onMove);
       document.removeEventListener('touchend', endDrag);
       document.removeEventListener('touchcancel', endDrag);
-      if(dragIdx == null) return;
-      dragIdx = null; draw(); refreshAll();
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', endDrag);
+      if(!drag) return;
+      var d = drag; drag = null; dragEnd = Date.now();
+      cancelAnimationFrame(d.raf);
+      container.classList.remove('sorting');
+      if(d.to !== d.from){
+        var arr = cfg.arr();
+        arr.splice(d.to, 0, arr.splice(d.from, 1)[0]);
+        cfg.persist();
+      }
+      draw(); refreshAll();
     }
 
     return { draw: draw };
@@ -1202,6 +1254,7 @@
     updateShootBtn();
   }
 
+  $('setBtn').addEventListener('click', function(){ renderHome(); showScreen('scrSettings'); });
   document.querySelectorAll('[data-go]').forEach(function(b){
     b.addEventListener('click', function(){
       var g = b.getAttribute('data-go');
@@ -1669,7 +1722,14 @@
   });
 
   /* ================= 촬영 화면 ================= */
+  // 아이폰 앱(1.0.30~): 홈·설정은 세로로, 촬영 화면은 가로로 돌린다
+  function setOrient(mode){
+    if(nativeApp && window.__boardApp && window.__boardApp.orient)
+      window.webkit.messageHandlers.board.postMessage({ type:'orient', mode: mode });
+  }
+  setOrient('portrait');
   $('shootBtn').addEventListener('click', function(){
+    setOrient('landscape');
     values.site = siteInput.value.trim();
     var c = curCat();
     if(values.site && c && c.sites.indexOf(values.site) < 0){ c.sites.push(values.site); saveTree(); }
@@ -1685,6 +1745,7 @@
     stopGeo();
     $('cam').classList.remove('show');
     $('home').classList.remove('hide');
+    setOrient('portrait');
     renderHome();
   });
 

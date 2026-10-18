@@ -46,8 +46,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscape }
-    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation { .landscapeRight }
+    /// 홈·설정은 세로, 촬영 화면은 가로 (웹페이지가 orient 메시지로 바꾼다)
+    private var orientMask: UIInterfaceOrientationMask = .portrait
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { orientMask }
+    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation { orientMask == .portrait ? .portrait : .landscapeRight }
 
     private var pageURL: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -63,7 +65,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, photos: true, focus: true, http: true };",
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, photos: true, focus: true, http: true, orient: true };",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
@@ -190,6 +192,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             httpRequest(id: body["id"] as? Int ?? 0, url: body["url"] as? String ?? "",
                         method: body["method"] as? String ?? "GET", body: body["body"] as? String,
                         headers: body["headers"] as? [String: String])
+        case "orient": setOrientation(body["mode"] as? String == "landscape" ? .landscape : .portrait)
         case "openPhotos":
             if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
         case "camZoom":
@@ -201,6 +204,21 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 applyPreviewFrame()
             }
         default: break
+        }
+    }
+
+    // MARK: - 화면 방향
+
+    private func setOrientation(_ mask: UIInterfaceOrientationMask) {
+        guard mask != orientMask else { return }
+        orientMask = mask
+        if #available(iOS 16.0, *) {
+            setNeedsUpdateOfSupportedInterfaceOrientations()
+            view.window?.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { _ in }
+        } else {
+            let o: UIInterfaceOrientation = mask == .portrait ? .portrait : .landscapeRight
+            UIDevice.current.setValue(o.rawValue, forKey: "orientation")
+            UIViewController.attemptRotationToDeviceOrientation()
         }
     }
 
