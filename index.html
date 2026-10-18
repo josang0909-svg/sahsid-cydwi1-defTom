@@ -372,22 +372,21 @@
   }
   .toast.show{opacity:1;}
 
-  /* ===== 홈: 위 제목·설정, 가운데 선택·미리보기, 아래 버튼 고정 (세로 화면) ===== */
-  #home{overflow:hidden;}
-  .home-wrap{display:flex;flex-direction:column;height:100%;max-width:640px;margin:0 auto;}
-  .home-top{flex:none;padding:calc(14px + var(--st)) calc(18px + var(--sr)) 12px calc(18px + var(--sl));border-bottom:1px solid var(--line);}
-  .home-top .hd-row{display:flex;align-items:flex-end;gap:10px;}
-  .home-top h1{flex:1;min-width:0;margin:8px 0 2px;font-size:21px;font-weight:800;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* ===== 홈 (세로 화면): 로고·설정 버튼 / 시설물 종류 / 시설물명 / 보드판 미리보기 / 사진 편집·촬영 시작 ===== */
+  .home-wrap{max-width:640px;margin:0 auto;}
+  .home-main{padding:calc(18px + var(--st)) calc(16px + var(--sr)) calc(30px + var(--sb)) calc(16px + var(--sl));}
+  .home-id{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .mark.big{font-size:22px;letter-spacing:5px;padding:4px 10px;border-radius:5px;font-weight:700;}
+  /* 설정 버튼: 사이트 내비 상단 아이콘 버튼과 같은 모양 */
   .tool-btn{min-width:50px;background:transparent;border:1px solid var(--line);border-radius:var(--r-btn, 9px);padding:6px 4px 5px;
     display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--accent);}
   .tool-btn:active{border-color:var(--accent);background:rgba(182,146,123,0.12);}
   .tool-ico{width:18px;height:18px;display:block;}
   .tool-nm{font-size:9.5px;font-weight:700;color:var(--text);line-height:1.2;}
-  .home-main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px calc(16px + var(--sr)) 18px calc(16px + var(--sl));}
-  .home-btns{flex:none;display:flex;gap:10px;padding:10px calc(16px + var(--sr)) calc(12px + var(--sb)) calc(16px + var(--sl));border-top:1px solid var(--line);background:var(--bg);}
-  .home-btns .shoot-btn{flex:1;min-width:0;justify-content:center;padding:17px;font-size:17px;border-radius:12px;}
-  .home-btns .shoot-btn.alt{flex:0.7;background:var(--card);color:var(--text);border:1px solid var(--line);}
-  .home-main > *,.home-top,.home-btns{zoom:var(--zoom);}
+  .home-btns{display:flex;gap:10px;margin-top:18px;}
+  .home-main .shoot-btn{flex:1;min-width:0;justify-content:center;padding:17px;font-size:17px;border-radius:12px;}
+  .home-main .shoot-btn.alt{flex:0.7;background:var(--card);color:var(--text);border:1px solid var(--line);}
+  .home-main > *{zoom:var(--zoom);}
 
   @media (orientation:landscape) and (min-width:600px){
     .scr-head{padding-top:calc(8px + var(--st));padding-bottom:8px;}
@@ -438,18 +437,16 @@
 <!-- ============ 홈 ============ -->
 <div id="home">
   <div class="home-wrap">
-    <header class="home-top">
-      <span class="mark">SITE·BOARD</span>
-      <div class="hd-row">
-        <h1>현장 보드판</h1>
+
+    <section class="home-main">
+      <div class="home-id">
+        <span class="mark big">SITE·BOARD</span>
         <button class="tool-btn" id="setBtn" type="button" aria-label="설정">
           <svg class="tool-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           <span class="tool-nm">설정</span>
         </button>
       </div>
-    </header>
 
-    <section class="home-main">
       <div class="sec">
         <div class="t">시설물 종류</div>
         <div class="chips" id="catChips"></div>
@@ -470,12 +467,12 @@
         <div class="t">보드판 미리보기</div>
         <div class="prev-wrap"><table class="bprev white" id="homePrev"></table></div>
       </div>
-    </section>
 
-    <div class="home-btns">
-      <button class="shoot-btn alt" id="galleryBtn">사진 편집</button>
-      <button class="shoot-btn" id="shootBtn">촬영 시작</button>
-    </div>
+      <div class="home-btns">
+        <button class="shoot-btn alt" id="galleryBtn">사진 편집</button>
+        <button class="shoot-btn" id="shootBtn">촬영 시작</button>
+      </div>
+    </section>
   </div>
 </div>
 
