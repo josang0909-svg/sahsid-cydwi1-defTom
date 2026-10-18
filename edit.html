@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>보드판 목록 편집</title>
+<link rel="icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#181616; --card:#1D1C19; --card-2:#282727; --line:#393836;
+    --accent:#b6927b; --on-accent:#181616;
+    --text:#c5c9c5; --muted:#9e9b93; --danger:#c4746e; --field:#12120f;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+  header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  header h1{font-size:17px;margin:0;flex:1;min-width:160px;}
+  .who{font-size:12.5px;color:var(--muted);}
+  main{padding:16px 20px 60px;max-width:1400px;margin:0 auto;}
+  button{font:inherit;cursor:pointer;}
+  .btn{padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-weight:600;font-size:13px;}
+  .btn:hover{border-color:var(--accent);}
+  .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  .btn.warn{color:var(--danger);}
+  .btn:disabled{opacity:.45;cursor:default;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;}
+  .login{max-width:380px;margin:60px auto;display:flex;flex-direction:column;gap:10px;}
+  input[type=email],input[type=password]{padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--text);font:inherit;}
+  .msg{font-size:13px;color:var(--muted);min-height:20px;}
+  .msg.err{color:var(--danger);}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px;}
+  .tab{padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-weight:700;}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  .tab.add{border-style:dashed;color:var(--accent);}
+  .hint{font-size:12.5px;color:var(--muted);margin:6px 0 12px;line-height:1.7;}
+  .hint b{color:var(--text);}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:16px;align-items:start;}
+  @media (max-width:800px){ .layout{grid-template-columns:1fr;} }
+  .gridwrap{overflow:auto;max-height:calc(100vh - 230px);border:1px solid var(--line);border-radius:10px;background:var(--field);}
+  table.grid{border-collapse:collapse;}
+  table.grid td,table.grid th{border:1px solid var(--line);padding:0;min-width:150px;}
+  table.grid th.rn,table.grid td.rn{min-width:38px;width:38px;text-align:center;color:var(--muted);font-size:11px;font-weight:400;background:var(--card);position:sticky;left:0;z-index:1;}
+  table.grid thead th{position:sticky;top:0;background:var(--card-2);z-index:2;}
+  table.grid thead th.rn{z-index:3;}
+  table.grid tr.ops th{top:37px;background:var(--card);}
+  table.grid input{width:100%;padding:8px 9px;border:none;background:transparent;color:var(--text);font:inherit;outline:none;}
+  table.grid thead input{font-weight:700;color:#e3e0d8;}
+  table.grid input:focus{background:rgba(182,146,123,.16);box-shadow:inset 0 0 0 2px var(--accent);}
+  .ops button{background:none;border:none;color:var(--muted);padding:3px 6px;font-size:12px;}
+  .ops button:hover{color:var(--text);}
+  .ops button.x:hover{color:var(--danger);}
+  textarea.sites{width:100%;min-height:260px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--text);font:inherit;resize:vertical;}
+  .side h3{font-size:12px;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+  .bar .sp{flex:1;}
+  .dirty{color:var(--accent);font-size:12.5px;font-weight:700;}
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--card-2);border:1px solid var(--line);padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;}
+  #toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<header>
+  <h1>보드판 목록 편집 (PC)</h1>
+  <span class="who" id="who"></span>
+  <button class="btn" id="outBtn" style="display:none">로그아웃</button>
+</header>
+<main>
+  <div class="card login" id="loginBox">
+    <b>앱과 같은 계정으로 로그인</b>
+    <input type="email" id="em" placeholder="이메일" autocomplete="username">
+    <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password">
+    <button class="btn pri" id="loginBtn">로그인</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div id="editBox" style="display:none">
+    <div class="bar">
+      <button class="btn pri" id="saveBtn">클라우드에 저장</button>
+      <button class="btn" id="reloadBtn">클라우드에서 다시 불러오기</button>
+      <span class="dirty" id="dirty"></span>
+      <span class="sp"></span>
+      <button class="btn" id="xlsxOut">엑셀로 내려받기</button>
+      <button class="btn" id="xlsxIn">엑셀 올리기</button>
+      <input type="file" id="xlsxFile" accept=".xlsx,.xls,.csv" hidden>
+    </div>
+    <div class="msg" id="state"></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="hint">
+      <b>1행은 부재명</b>, 그 아래 같은 열은 그 부재의 <b>손상명</b>입니다. 엑셀에서 여러 칸을 복사해 아무 칸에 붙여 넣으면 그 자리부터 채워집니다.
+      보드판에서 줄을 바꾸려면 <b>//</b> 를 넣으세요. 빈 칸은 무시됩니다. 부재의 위치 양식은 부재명이 같으면 그대로 유지됩니다.
+      저장한 뒤 휴대폰 앱을 열면 새 목록을 불러올지 묻습니다.
+    </div>
+    <div class="layout">
+      <div>
+        <div class="bar">
+          <button class="btn" id="catRen">종류 이름 바꾸기</button>
+          <button class="btn warn" id="catDel">이 종류 삭제</button>
+          <span class="sp"></span>
+          <button class="btn" id="addCol">부재 열 추가</button>
+          <button class="btn" id="addRows">손상 행 추가</button>
+          <button class="btn" id="copyTsv">표 복사 (엑셀 붙여넣기용)</button>
+        </div>
+        <div class="gridwrap"><table class="grid" id="grid"></table></div>
+      </div>
+      <div class="side">
+        <h3>시설명 (한 줄에 하나)</h3>
+        <textarea class="sites" id="sites"></textarea>
+      </div>
+    </div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  // 앱(index.html)과 같은 Firebase 프로젝트 · 같은 문서 fieldboard/{uid}
+  var FB = { apiKey: 'AIzaSyBpcVG85oHMcNcIg223Cr6Bb01Ozj80_KQ', projectId: 'field-board-62024', col: 'fieldboard' };
+  var acct = {};
+  try{ acct = JSON.parse(localStorage.getItem('bdpc_acct') || '{}'); }catch(e){}
+  function saveAcct(){ try{ localStorage.setItem('bdpc_acct', JSON.stringify(acct)); }catch(e){} }
+
+  var doc = null;         // 클라우드에서 받은 전체 백업 {v, tree, settings, ui}
+  var loadedAt = 0;       // 받은 백업의 savedAt
+  var cats = [];          // 편집 중: [{name, orig, grid:[[부재명...],[손상...]...], src:[열마다 원래 부재명], sites:[...]}]
+  var cur = 0, dirty = false;
+
+  function toast(t){ var e = $('toast'); e.textContent = t; e.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(function(){ e.classList.remove('show'); }, 2200); }
+  function setState(t, err){ $('state').textContent = t || ''; $('state').classList.toggle('err', !!err); }
+  function markDirty(on){ dirty = on; $('dirty').textContent = on ? '저장하지 않은 변경이 있습니다' : ''; }
+  window.addEventListener('beforeunload', function(e){ if(dirty){ e.preventDefault(); e.returnValue = ''; } });
+  function fmtAt(t){ var d = new Date(t), p = function(n){ return (n < 10 ? '0' : '') + n; };
+    return (d.getMonth() + 1) + '.' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+
+  /* ---------- Firebase REST ---------- */
+  function req(url, method, headers, body){
+    return fetch(url, { method: method, headers: headers || {}, body: body, cache:'no-store' }).then(function(r){
+      return r.text().then(function(t){ var j = {}; try{ j = JSON.parse(t); }catch(e){} return { status: r.status, json: j }; });
+    });
+  }
+  function fbErr(r){
+    var m = (r.json.error && (r.json.error.message || r.json.error.status)) || ('HTTP ' + r.status);
+    if(/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND|INVALID_EMAIL/.test(m)) return '이메일 또는 비밀번호가 맞지 않습니다.';
+    if(/TOO_MANY_ATTEMPTS/.test(m)) return '로그인 시도가 너무 많습니다. 잠시 후 다시 해 주세요.';
+    if(r.status === 403 || /PERMISSION_DENIED/.test(m)) return '클라우드 권한이 없습니다. Firestore 규칙을 확인하세요.';
+    return m;
+  }
+  function signIn(email, pw){
+    return req('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + FB.apiKey, 'POST',
+      { 'Content-Type':'application/json' }, JSON.stringify({ email: email, password: pw, returnSecureToken: true })).then(function(r){
+      if(r.status !== 200) throw new Error(fbErr(r));
+      var d = r.json;
+      acct = { email: d.email, uid: d.localId, idToken: d.idToken, refreshToken: d.refreshToken,
+               expiresAt: Date.now() + (Number(d.expiresIn || 3600) - 60) * 1000 };
+      saveAcct();
+    });
+  }
+  function idToken(){
+    if(!acct.refreshToken) return Promise.reject(new Error('로그인이 필요합니다.'));
+    if(acct.idToken && Date.now() < (acct.expiresAt || 0)) return Promise.resolve(acct.idToken);
+    return req('https://securetoken.googleapis.com/v1/token?key=' + FB.apiKey, 'POST',
+      { 'Content-Type':'application/x-www-form-urlencoded' }, 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(acct.refreshToken)).then(function(r){
+      if(r.status !== 200){ if(r.status === 400){ acct = {}; saveAcct(); showLogin(); } throw new Error('로그인이 만료되었습니다. 다시 로그인하세요.'); }
+      acct.idToken = r.json.id_token; acct.refreshToken = r.json.refresh_token || acct.refreshToken;
+      acct.expiresAt = Date.now() + (Number(r.json.expires_in || 3600) - 60) * 1000; saveAcct();
+      return acct.idToken;
+    });
+  }
+  function docUrl(){ return 'https://firestore.googleapis.com/v1/projects/' + FB.projectId + '/databases/(default)/documents/' + FB.col + '/' + encodeURIComponent(acct.uid); }
+  function pull(){
+    return idToken().then(function(t){ return req(docUrl(), 'GET', { Authorization:'Bearer ' + t }); }).then(function(r){
+      if(r.status === 404) return null;
+      if(r.status !== 200) throw new Error(fbErr(r));
+      var f = r.json.fields || {}, d = null;
+      try{ d = JSON.parse((f.data && f.data.stringValue) || 'null'); }catch(e){}
+      if(!d || !d.tree || !d.tree.cats) return null;
+      d.savedAt = f.savedAt ? Number(f.savedAt.integerValue) : 0;
+      return d;
+    });
+  }
+  function push(data){
+    var now = Date.now();
+    return idToken().then(function(t){
+      return req(docUrl(), 'PATCH', { 'Content-Type':'application/json', Authorization:'Bearer ' + t },
+        JSON.stringify({ fields: { data: { stringValue: JSON.stringify(data) }, savedAt: { integerValue: String(now) }, by: { stringValue: 'pc' } } }));
+    }).then(function(r){ if(r.status !== 200) throw new Error(fbErr(r)); return now; });
+  }
+
+  /* ---------- 백업 ↔ 표 ---------- */
+  // 보드판의 줄바꿈은 칸 안에서 // 로 보인다
+  function toCell(v){ return String(v == null ? '' : v).replace(/\n/g, ' // '); }
+  function fromCell(v){ return String(v == null ? '' : v).split(/\s*\/\/\s*/).map(function(x){ return x.trim(); }).filter(Boolean).join('\n'); }
+  function fromDoc(d){
+    cats = d.tree.cats.map(function(c){
+      var ms = c.members || [], h = 1;
+      ms.forEach(function(m){ h = Math.max(h, (m.notes || []).length + 1); });
+      var grid = [];
+      for(var r = 0; r < h; r++) grid.push(ms.map(function(m){ return toCell(r === 0 ? m.name : (m.notes || [])[r - 1]); }));
+      return { name: c.name, orig: c.name, grid: grid, src: ms.map(function(m){ return m.name; }), sites: (c.sites || []).map(toCell) };
+    });
+    if(!cats.length) cats.push({ name:'터널', orig:null, grid:[[]], sites:[] });
+    cur = Math.min(cur, cats.length - 1);
+  }
+  function cell(g, r, c){ return (g[r] && g[r][c] != null) ? g[r][c] : ''; }
+  function setCell(g, r, c, v){ while(g.length <= r) g.push([]); g[r][c] = v; }
+  function nCols(g){ var n = 0; g.forEach(function(row){ n = Math.max(n, row.length); }); return n; }
+  // 표 → 부재 목록. 문제가 있으면 문구를 던진다
+  function columns(cat){
+    var g = cat.grid, out = [], seen = {};
+    for(var c = 0; c < nCols(g); c++){
+      var name = fromCell(cell(g, 0, c)), notes = [];
+      for(var r = 1; r < g.length; r++){ var v = fromCell(cell(g, r, c)); if(v && notes.indexOf(v) < 0) notes.push(v); }
+      if(!name){ if(notes.length) throw new Error('"' + cat.name + '"의 ' + (c + 1) + '번째 열에 부재명이 비어 있습니다.'); continue; }
+      if(seen[name]) throw new Error('"' + cat.name + '"에 부재명 "' + name.replace(/\n/g, ' ') + '"이 두 번 있습니다.');
+      seen[name] = 1; out.push({ name: name, notes: notes, src: (cat.src || [])[c] });
+    }
+    return out;
+  }
+  function toDoc(){
+    var old = doc && doc.tree ? doc.tree : { cats: [] };
+    var t = JSON.parse(JSON.stringify(old));
+    t.cats = cats.map(function(cat){
+      var oc = old.cats.filter(function(x){ return x.name === cat.orig; })[0] || {};
+      var nc = JSON.parse(JSON.stringify(oc));
+      nc.name = cat.name.trim();
+      nc.sites = cat.sites.map(fromCell).filter(Boolean);
+      if(!nc.common) nc.common = ['상태양호'];
+      nc.members = columns(cat).map(function(col){
+        // 이름을 고친 부재도 원래 부재의 위치 양식·최근 위치를 이어받는다
+        var om = (oc.members || []).filter(function(m){ return m.name === col.src; })[0] ||
+                 (oc.members || []).filter(function(m){ return m.name === col.name; })[0];
+        var m = om ? JSON.parse(JSON.stringify(om)) : { name: col.name };   // 새 부재: 위치 양식은 앱이 채운다
+        m.notes = col.notes;
+        return m;
+      });
+      return nc;
+    });
+    var names = {};
+    t.cats.forEach(function(c){
+      if(!c.name) throw new Error('이름이 빈 시설물 종류가 있습니다.');
+      if(names[c.name]) throw new Error('시설물 종류 "' + c.name + '"이 두 번 있습니다.');
+      names[c.name] = 1;
+    });
+    if(!t.cats.length) throw new Error('시설물 종류가 하나는 있어야 합니다.');
+    var d = JSON.parse(JSON.stringify(doc || { v:1 }));
+    delete d.savedAt;
+    d.tree = t;
+    return d;
+  }
+
+  /* ---------- 화면 ---------- */
+  function showLogin(){ $('loginBox').style.display = ''; $('editBox').style.display = 'none'; $('outBtn').style.display = 'none'; $('who').textContent = ''; $('em').value = acct.email || ''; }
+  function showEdit(){ $('loginBox').style.display = 'none'; $('editBox').style.display = ''; $('outBtn').style.display = ''; $('who').textContent = acct.email || ''; }
+  function drawTabs(){
+    var box = $('tabs'); box.innerHTML = '';
+    cats.forEach(function(c, i){
+      var b = document.createElement('button'); b.className = 'tab' + (i === cur ? ' on' : ''); b.textContent = c.name;
+      b.onclick = function(){ cur = i; draw(); };
+      box.appendChild(b);
+    });
+    var a = document.createElement('button'); a.className = 'tab add'; a.textContent = '+ 종류 추가';
+    a.onclick = function(){
+      var n = (prompt('새 시설물 종류 이름') || '').trim(); if(!n) return;
+      if(cats.some(function(c){ return c.name === n; })){ toast('같은 이름이 있습니다'); return; }
+      cats.push({ name:n, orig:null, grid:[['전경']], sites:[] }); cur = cats.length - 1; markDirty(true); draw();
+    };
+    box.appendChild(a);
+  }
+  function drawGrid(focus){
+    var cat = cats[cur], g = cat.grid;
+    var cols = nCols(g) + 2, rows = Math.max(g.length + 5, 12);
+    var tb = $('grid'); tb.innerHTML = '';
+    var thead = document.createElement('thead');
+    var hr = document.createElement('tr'), ops = document.createElement('tr'); ops.className = 'ops';
+    hr.appendChild(Object.assign(document.createElement('th'), { className:'rn', textContent:'부재' }));
+    ops.appendChild(Object.assign(document.createElement('th'), { className:'rn' }));
+    for(var c = 0; c < cols; c++){
+      var th = document.createElement('th'); th.appendChild(inp(0, c, cell(g, 0, c), '부재명')); hr.appendChild(th);
+      var oh = document.createElement('th');
+      if(c < nCols(g)) (function(c){
+        [['◀','왼쪽으로', function(){ moveCol(c, -1); }], ['▶','오른쪽으로', function(){ moveCol(c, 1); }], ['✕','이 부재 열 삭제', function(){ delCol(c); }]].forEach(function(o){
+          var b = document.createElement('button'); b.textContent = o[0]; b.title = o[1]; b.onclick = o[2]; if(o[0] === '✕') b.className = 'x'; oh.appendChild(b);
+        });
+      })(c);
+      ops.appendChild(oh);
+    }
+    thead.appendChild(hr); thead.appendChild(ops); tb.appendChild(thead);
+    var tbody = document.createElement('tbody');
+    for(var r = 1; r < rows; r++){
+      var tr = document.createElement('tr');
+      tr.appendChild(Object.assign(document.createElement('td'), { className:'rn', textContent: r }));
+      for(c = 0; c < cols; c++){ var td = document.createElement('td'); td.appendChild(inp(r, c, cell(g, r, c), '')); tr.appendChild(td); }
+      tbody.appendChild(tr);
+    }
+    tb.appendChild(tbody);
+    if(focus){ var f = tb.querySelector('input[data-r="' + focus[0] + '"][data-c="' + focus[1] + '"]'); if(f){ f.focus(); f.setSelectionRange(f.value.length, f.value.length); } }
+  }
+  function inp(r, c, v, ph){
+    var i = document.createElement('input'); i.value = v; i.placeholder = ph;
+    i.setAttribute('data-r', r); i.setAttribute('data-c', c);
+    i.addEventListener('input', function(){ setCell(cats[cur].grid, r, c, i.value); markDirty(true); });
+    // 표 끝까지 쓰면 칸을 늘린다
+    i.addEventListener('change', function(){
+      var g = cats[cur].grid;
+      if(c >= nCols(g) - 1 || r >= g.length - 1) drawGrid(document.activeElement && document.activeElement.dataset.r != null ? [+document.activeElement.dataset.r, +document.activeElement.dataset.c] : null);
+    });
+    i.addEventListener('keydown', function(e){
+      var to = null;
+      if(e.key === 'Enter' || e.key === 'ArrowDown') to = [r + 1, c];
+      else if(e.key === 'ArrowUp') to = [r - 1, c];
+      else if(e.key === 'ArrowRight' && i.selectionStart === i.value.length) to = [r, c + 1];
+      else if(e.key === 'ArrowLeft' && i.selectionStart === 0) to = [r, c - 1];
+      if(!to || to[0] < 0 || to[1] < 0) return;
+      e.preventDefault();
+      var f = $('grid').querySelector('input[data-r="' + to[0] + '"][data-c="' + to[1] + '"]');
+      if(f){ f.focus(); f.select(); }
+    });
+    i.addEventListener('paste', function(e){
+      var t = (e.clipboardData || window.clipboardData).getData('text');
+      if(!/[\t\n]/.test(t.replace(/\r?\n$/, ''))) return;
+      e.preventDefault();
+      var rows = parseTsv(t), g = cats[cur].grid;
+      rows.forEach(function(row, dr){ row.forEach(function(v, dc){ setCell(g, r + dr, c + dc, toCell(v)); }); });
+      markDirty(true); drawGrid([r, c]);
+      toast(rows.length + '행 × ' + Math.max.apply(null, rows.map(function(x){ return x.length; })) + '열 붙여 넣음');
+    });
+    return i;
+  }
+  // 엑셀 복사본(탭 구분, 칸 안 줄바꿈은 따옴표) 읽기
+  function parseTsv(t){
+    t = t.replace(/\r\n?/g, '\n').replace(/\n$/, '');
+    var rows = [[]], v = '', q = false;
+    for(var k = 0; k < t.length; k++){
+      var ch = t[k];
+      if(q){ if(ch === '"'){ if(t[k + 1] === '"'){ v += '"'; k++; } else q = false; } else v += ch; }
+      else if(ch === '"' && v === '') q = true;
+      else if(ch === '\t'){ rows[rows.length - 1].push(v); v = ''; }
+      else if(ch === '\n'){ rows[rows.length - 1].push(v); rows.push([]); v = ''; }
+      else v += ch;
+    }
+    rows[rows.length - 1].push(v);
+    return rows;
+  }
+  function moveCol(c, d){
+    var g = cats[cur].grid, n = nCols(g), to = c + d;
+    if(to < 0 || to >= n) return;
+    g.forEach(function(row){ while(row.length < n) row.push(''); var x = row[c]; row[c] = row[to]; row[to] = x; });
+    var s = cats[cur].src || (cats[cur].src = []), y = s[c]; s[c] = s[to]; s[to] = y;
+    markDirty(true); drawGrid();
+  }
+  function delCol(c){
+    var g = cats[cur].grid, name = fromCell(cell(g, 0, c)) || (c + 1) + '번째 열';
+    if(!confirm('"' + name.replace(/\n/g, ' ') + '" 부재와 그 손상명을 지울까요?')) return;
+    g.forEach(function(row){ row.splice(c, 1); });
+    if(cats[cur].src) cats[cur].src.splice(c, 1);
+    markDirty(true); drawGrid();
+  }
+  function draw(){
+    drawTabs(); drawGrid();
+    $('sites').value = cats[cur].sites.map(fromCell).join('\n');
+  }
+  $('sites').addEventListener('input', function(){ cats[cur].sites = $('sites').value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean); markDirty(true); });
+  $('addCol').onclick = function(){ var g = cats[cur].grid, n = nCols(g); setCell(g, 0, n, ''); drawGrid([0, n]); };
+  $('addRows').onclick = function(){ var g = cats[cur].grid; for(var k = 0; k < 10; k++) g.push([]); drawGrid(); };
+  $('catRen').onclick = function(){
+    var c = cats[cur], n = (prompt('종류 이름', c.name) || '').trim();
+    if(!n || n === c.name) return;
+    if(cats.some(function(x){ return x !== c && x.name === n; })){ toast('같은 이름이 있습니다'); return; }
+    c.name = n; markDirty(true); drawTabs();
+  };
+  $('catDel').onclick = function(){
+    if(cats.length <= 1){ toast('종류는 하나는 있어야 합니다'); return; }
+    if(!confirm('"' + cats[cur].name + '" 종류와 그 안의 부재·손상·시설명을 모두 지울까요? (저장해야 반영됩니다)')) return;
+    cats.splice(cur, 1); cur = 0; markDirty(true); draw();
+  };
+  $('copyTsv').onclick = function(){
+    var g = cats[cur].grid, n = nCols(g);
+    var txt = g.filter(function(row){ return row.some(function(v){ return v && v.trim(); }); })
+      .map(function(row){ var a = []; for(var c = 0; c < n; c++) a.push(cell([row], 0, c)); return a.join('\t'); }).join('\n');
+    navigator.clipboard.writeText(txt).then(function(){ toast('복사했습니다. 엑셀에 붙여 넣으세요'); }, function(){ toast('복사하지 못했습니다'); });
+  };
+
+  /* ---------- 엑셀 ---------- */
+  var SITE_SHEET = '시설명';
+  function sheetName(n){ return n.replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31) || '종류'; }
+  $('xlsxOut').onclick = function(){
+    if(!window.XLSX){ toast('엑셀 도구를 불러오지 못했습니다. 인터넷 연결을 확인하세요'); return; }
+    var wb = XLSX.utils.book_new();
+    cats.forEach(function(cat){
+      var g = cat.grid, n = nCols(g);
+      var aoa = g.map(function(row){ var a = []; for(var c = 0; c < n; c++) a.push(cell([row], 0, c)); return a; })
+        .filter(function(row, i){ return i === 0 || row.some(function(v){ return v; }); });
+      var ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = aoa[0] ? aoa[0].map(function(){ return { wch: 22 }; }) : [];
+      XLSX.utils.book_append_sheet(wb, ws, sheetName(cat.name));
+    });
+    var h = 0; cats.forEach(function(c){ h = Math.max(h, c.sites.length); });
+    var sa = [cats.map(function(c){ return c.name; })];
+    for(var r = 0; r < h; r++) sa.push(cats.map(function(c){ return c.sites[r] || ''; }));
+    var ws = XLSX.utils.aoa_to_sheet(sa); ws['!cols'] = cats.map(function(){ return { wch: 22 }; });
+    XLSX.utils.book_append_sheet(wb, ws, SITE_SHEET);
+    var d = new Date(), p = function(n){ return (n < 10 ? '0' : '') + n; };
+    XLSX.writeFile(wb, '보드판목록_' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.xlsx');
+  };
+  $('xlsxIn').onclick = function(){ $('xlsxFile').value = ''; $('xlsxFile').click(); };
+  $('xlsxFile').onchange = function(){
+    var f = this.files[0]; if(!f) return;
+    if(!window.XLSX){ toast('엑셀 도구를 불러오지 못했습니다'); return; }
+    f.arrayBuffer().then(function(buf){
+      var wb = XLSX.read(buf, { type:'array' }), changed = [];
+      wb.SheetNames.forEach(function(sn){
+        if(sn === SITE_SHEET) return;
+        var aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header:1, defval:'', raw:false });
+        if(!aoa.length) return;
+        var grid = aoa.map(function(row){ return row.map(function(v){ return toCell(String(v).replace(/\r?\n/g, '\n')); }); });
+        var cat = cats.filter(function(c){ return sheetName(c.name) === sn || c.name === sn; })[0];
+        if(!cat){ cat = { name: sn, orig: null, grid: [], sites: [] }; cats.push(cat); }
+        cat.grid = grid; cat.src = []; changed.push(cat.name);
+      });
+      var ss = wb.Sheets[SITE_SHEET];
+      if(ss){
+        var aoa = XLSX.utils.sheet_to_json(ss, { header:1, defval:'', raw:false });
+        (aoa[0] || []).forEach(function(nm, c){
+          var cat = cats.filter(function(x){ return x.name === String(nm).trim(); })[0]; if(!cat) return;
+          cat.sites = aoa.slice(1).map(function(row){ return String(row[c] || '').trim(); }).filter(Boolean);
+        });
+      }
+      markDirty(true); draw();
+      setState('엑셀에서 ' + changed.join(', ') + ' 탭을 가져왔습니다. 확인한 뒤 [클라우드에 저장]을 누르세요. 엑셀에 없는 종류는 그대로 둡니다.');
+    }).catch(function(e){ setState('엑셀을 읽지 못했습니다: ' + e.message, true); });
+  };
+
+  /* ---------- 불러오기 · 저장 ---------- */
+  function load(){
+    setState('클라우드에서 받는 중…');
+    return pull().then(function(d){
+      if(!d){ setState('클라우드에 백업이 없습니다. 휴대폰 앱에서 로그인해 [지금 백업]을 먼저 해 주세요.', true); return; }
+      doc = d; loadedAt = d.savedAt; fromDoc(d); markDirty(false); showEdit(); draw();
+      setState(fmtAt(d.savedAt) + ' 백업을 불러왔습니다.');
+    });
+  }
+  $('reloadBtn').onclick = function(){
+    if(dirty && !confirm('저장하지 않은 변경을 버리고 다시 불러올까요?')) return;
+    load().catch(function(e){ setState(e.message, true); });
+  };
+  $('saveBtn').onclick = function(){
+    var data;
+    try{ data = toDoc(); }catch(e){ setState(e.message, true); return; }
+    $('saveBtn').disabled = true; setState('저장 중…');
+    pull().then(function(d){
+      if(d && d.savedAt !== loadedAt && !confirm('불러온 뒤에 휴대폰에서 ' + fmtAt(d.savedAt) + '에 새로 백업했습니다. 덮어쓸까요?\n(취소하면 저장하지 않습니다)')) throw new Error('저장을 취소했습니다.');
+      if(d){ data.settings = d.settings; data.ui = d.ui; }   // 보드판·화면 설정은 클라우드 최신 것을 그대로
+      return push(data);
+    }).then(function(at){
+      doc = data; doc.savedAt = at; loadedAt = at;
+      fromDoc(doc); draw();
+      markDirty(false);
+      setState(fmtAt(at) + ' 저장했습니다. 휴대폰 앱을 열면 새 목록을 불러올지 묻습니다.');
+    }).catch(function(e){ setState(e.message, true); }).then(function(){ $('saveBtn').disabled = false; });
+  };
+  $('loginBtn').onclick = function(){
+    var em = $('em').value.trim(), pw = $('pw').value;
+    if(!em || !pw){ $('loginMsg').textContent = '이메일과 비밀번호를 넣어 주세요.'; return; }
+    $('loginBtn').disabled = true; $('loginMsg').textContent = '로그인 중…'; $('loginMsg').classList.remove('err');
+    signIn(em, pw).then(function(){ $('pw').value = ''; $('loginMsg').textContent = ''; showEdit(); return load(); })
+      .catch(function(e){ $('loginMsg').textContent = e.message; $('loginMsg').classList.add('err'); })
+      .then(function(){ $('loginBtn').disabled = false; });
+  };
+  $('pw').addEventListener('keydown', function(e){ if(e.key === 'Enter') $('loginBtn').click(); });
+  $('outBtn').onclick = function(){
+    if(dirty && !confirm('저장하지 않은 변경이 있습니다. 로그아웃할까요?')) return;
+    acct = { email: acct.email }; saveAcct(); markDirty(false); showLogin();
+  };
+
+  if(acct.refreshToken){ showEdit(); load().catch(function(e){ setState(e.message, true); }); }
+  else showLogin();
+})();
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // 오프라인용 서비스 워커: 앱 파일을 캐시해 두고, 온라인이면 최신 버전으로 갱신
-const CACHE = 'board-v2';
+const CACHE = 'board-v3';
 const FILES = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -15,6 +15,7 @@ self.addEventListener('activate', e => {
 // 네트워크 우선, 실패하면(현장에서 오프라인) 캐시 사용
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== self.location.origin) return;   // 클라우드 요청은 캐시하지 않는다
   e.respondWith(
     fetch(e.request)
       .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return res; })
