@@ -170,6 +170,15 @@
   .opt.on{background:rgba(182,146,123,0.14);}
   .opt.dragging{background:var(--card-2);position:relative;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,0.45);border-radius:8px;}
   .editor.sorting{overflow:visible;}
+  .ed-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:-4px 0 6px;min-height:28px;}
+  .ed-hint{flex:1;min-width:0;font-size:11.5px;color:var(--accent);}
+  .ed-sel{flex:none;background:none;border:1px solid var(--line);border-radius:8px;color:var(--accent);font-size:12px;font-weight:700;padding:5px 10px;}
+  .editor.selmode .opt .act,.editor.selmode .opt .ar{display:none;}
+  .editor.selmode .opt .lbl{padding-left:30px;position:relative;}
+  .editor.selmode .opt .lbl::before{content:'';position:absolute;left:4px;top:50%;width:18px;height:18px;margin-top:-10px;border-radius:50%;border:1.5px solid var(--muted);}
+  .editor.selmode .opt.picked{background:rgba(182,146,123,0.14);}
+  .editor.selmode .opt.picked .lbl::before{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--card);}
+  .ed-badge{flex:none;margin-right:6px;padding:2px 8px;border-radius:10px;background:var(--accent);color:var(--on-accent);font-size:11.5px;font-weight:800;}
   .editor.sorting .opt{-webkit-user-select:none;user-select:none;}
   .editor.sorting .opt:not(.dragging){transition:transform .15s ease;}
   .opt{-webkit-touch-callout:none;}
@@ -1019,9 +1028,29 @@
 
   /* ================= 목록 편집기 (드래그 + 수정) ================= */
   function makeEditor(container, cfg){
+    // 여러 개 골라 한꺼번에 옮기기: 목록 위 [여러 개 옮기기] → 줄을 눌러 고르고 ☰ 로 끈다
+    var selMode = false, sel = [];
+    var tools = null;
+    if(cfg.multi !== false){
+      tools = document.createElement('div'); tools.className = 'ed-tools';
+      var tb = document.createElement('button'); tb.type = 'button'; tb.className = 'ed-sel';
+      var hint = document.createElement('span'); hint.className = 'ed-hint';
+      tools.appendChild(hint); tools.appendChild(tb);
+      tb.addEventListener('click', function(){ selMode = !selMode; sel = []; draw(); });
+      container.parentNode.insertBefore(tools, container);
+    }
+    function drawTools(n){
+      if(!tools) return;
+      tools.style.display = n > 2 ? '' : 'none';
+      tools.querySelector('.ed-sel').textContent = selMode ? '완료' : '여러 개 옮기기';
+      tools.querySelector('.ed-hint').textContent = selMode ? (sel.length ? sel.length + '개 선택 · ☰ 를 잡고 끌면 함께 옮겨집니다' : '옮길 줄을 눌러 고르세요') : '';
+      container.classList.toggle('selmode', selMode);
+    }
     function draw(){
       container.innerHTML = '';
       var arr = cfg.arr();
+      sel = sel.filter(function(x){ return arr.indexOf(x) >= 0; });
+      drawTools(arr.length);
       if(!arr.length){
         var e = document.createElement('div');
         e.className = 'opt';
@@ -1031,7 +1060,7 @@
       }
       arr.forEach(function(item, idx){
         var row = document.createElement('div');
-        row.className = 'opt' + (cfg.isOn && cfg.isOn(item) ? ' on' : '');
+        row.className = 'opt' + (cfg.isOn && cfg.isOn(item) && !selMode ? ' on' : '') + (selMode && sel.indexOf(item) >= 0 ? ' picked' : '');
         row.setAttribute('data-idx', idx);
 
         var dh = document.createElement('span');
@@ -1047,7 +1076,16 @@
           s.textContent = cfg.sub(item);
           lbl.appendChild(s);
         }
-        lbl.addEventListener('click', function(){ if(Date.now() - dragEnd < 450) return; cfg.tap(item, idx); });
+        lbl.addEventListener('click', function(){
+          if(Date.now() - dragEnd < 450) return;
+          if(selMode){
+            var k = sel.indexOf(item);
+            if(k >= 0) sel.splice(k, 1); else sel.push(item);
+            row.classList.toggle('picked', k < 0); drawTools(cfg.arr().length);
+            return;
+          }
+          cfg.tap(item, idx);
+        });
         row.appendChild(lbl);
 
         if(cfg.rename){
@@ -1118,9 +1156,18 @@
     }
     function startDrag(row, pt){
       if(drag) return;
-      var rows = [].slice.call(container.querySelectorAll('.opt[data-idx]'));
+      var all = [].slice.call(container.querySelectorAll('.opt[data-idx]'));
+      var arr0 = cfg.arr(), item = arr0[+row.getAttribute('data-idx')], group = null;
+      // 고른 줄을 잡았으면 고른 것 전부를 한 덩어리로 (나머지 고른 줄은 잠시 접어 둔다)
+      if(selMode && sel.length > 1 && sel.indexOf(item) >= 0){
+        group = arr0.filter(function(x){ return sel.indexOf(x) >= 0; });
+        all.forEach(function(r){ if(r !== row && group.indexOf(arr0[+r.getAttribute('data-idx')]) >= 0) r.style.display = 'none'; });
+        var badge = document.createElement('span'); badge.className = 'ed-badge'; badge.textContent = group.length + '개';
+        row.appendChild(badge);
+      }
+      var rows = all.filter(function(r){ return r.style.display !== 'none'; });
       var sc = scroller(container), st = sc ? sc.scrollTop : 0;
-      drag = { row: row, rows: rows, from: rows.indexOf(row), to: rows.indexOf(row), y0: pt.clientY, y: pt.clientY,
+      drag = { group: group, row: row, rows: rows, from: rows.indexOf(row), to: rows.indexOf(row), y0: pt.clientY, y: pt.clientY,
                sc: sc, st0: st, h: row.offsetHeight,
                mids: rows.map(function(r){ var b = r.getBoundingClientRect(); return b.top + st + b.height / 2; }) };
       container.classList.add('sorting');
@@ -1151,14 +1198,14 @@
         r.style.transform = off ? 'translateY(' + off + 'px)' : '';
       });
     }
-    // 손가락이 목록 위·아래 끝에 있으면 계속 스크롤
+    // 손가락을 그쪽으로 끌어 목록 위·아래 끝에 가져가면 천천히 스크롤 (가로 화면처럼 목록 칸이 낮아도 튀지 않게)
     function tick(){
       if(!drag) return;
       var sc = drag.sc;
       if(sc){
-        var b = sc.getBoundingClientRect(), edge = 56, v = 0;
-        if(drag.y < b.top + edge) v = -Math.ceil((b.top + edge - drag.y) / 5);
-        else if(drag.y > b.bottom - edge) v = Math.ceil((drag.y - (b.bottom - edge)) / 5);
+        var b = sc.getBoundingClientRect(), edge = Math.min(44, b.height * 0.12), v = 0, moved = drag.y - drag.y0;
+        if(moved < -12 && drag.y < b.top + edge) v = -Math.min(7, 1 + (b.top + edge - drag.y) / 8);
+        else if(moved > 12 && drag.y > b.bottom - edge) v = Math.min(7, 1 + (drag.y - (b.bottom - edge)) / 8);
         if(v){ var before = sc.scrollTop; sc.scrollTop += v; if(sc.scrollTop !== before) place(); }
       }
       drag.raf = requestAnimationFrame(tick);
@@ -1173,8 +1220,14 @@
       var d = drag; drag = null; dragEnd = Date.now();
       cancelAnimationFrame(d.raf);
       container.classList.remove('sorting');
-      if(d.to !== d.from){
-        var arr = cfg.arr();
+      var arr = cfg.arr();
+      if(d.group){
+        // 남은 줄 사이 d.to 자리에 고른 줄들을 원래 순서대로 끼운다
+        var rest = arr.filter(function(x){ return d.group.indexOf(x) < 0; });
+        var next = rest.slice(0, d.to).concat(d.group, rest.slice(d.to));
+        if(next.some(function(x, i){ return x !== arr[i]; })){ arr.splice.apply(arr, [0, arr.length].concat(next)); cfg.persist(); }
+        sel = []; selMode = false;
+      } else if(d.to !== d.from){
         arr.splice(d.to, 0, arr.splice(d.from, 1)[0]);
         cfg.persist();
       }
@@ -1198,6 +1251,51 @@
     syncShade();
     refreshAll();
   }
+  /* 왼쪽 가장자리에서 오른쪽으로 밀면 뒤로 (홈·설정 화면에서만, 촬영 중에는 안 함) */
+  (function(){
+    var sw = null;
+    function top(){
+      if($('cam').classList.contains('show') || !screenStack.length) return null;
+      var el = $(screenStack[screenStack.length - 1]);
+      return el && !el.classList.contains('panel') ? el : null;
+    }
+    document.addEventListener('touchstart', function(e){
+      sw = null;
+      var t = e.touches[0], el;
+      if(e.touches.length !== 1 || t.clientX > 20 || !(el = top())) return;
+      if(document.querySelector('.sheet.show')) return;
+      sw = { el: el, x: t.clientX, y: t.clientY, dx: 0, on: false, t: Date.now() };
+    }, {passive:true});
+    document.addEventListener('touchmove', function(e){
+      if(!sw) return;
+      if(!sw.on && document.querySelector('.editor.sorting')){ sw = null; return; }   // 순서 끌기 중이면 양보
+      var t = e.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
+      if(!sw.on){
+        if(Math.abs(dy) > 12 && Math.abs(dy) > dx){ sw = null; return; }
+        if(dx < 10) return;
+        sw.on = true; sw.el.style.transition = 'none'; sw.el.style.boxShadow = '-8px 0 24px rgba(0,0,0,0.45)';
+      }
+      e.preventDefault();
+      sw.dx = Math.max(0, dx);
+      sw.el.style.transform = 'translateX(' + sw.dx + 'px)';
+    }, {passive:false});
+    function end(){
+      if(!sw) return;
+      var s = sw; sw = null;
+      if(!s.on) return;
+      var fast = s.dx > 40 && s.dx / Math.max(1, Date.now() - s.t) > 0.5;
+      s.el.style.transition = 'transform .18s ease-out';
+      if(s.dx > window.innerWidth * 0.3 || fast){
+        s.el.style.transform = 'translateX(100%)';
+        setTimeout(function(){ s.el.style.transition = s.el.style.transform = s.el.style.boxShadow = ''; closeScreen(); }, 180);
+      } else {
+        s.el.style.transform = '';
+        setTimeout(function(){ s.el.style.transition = s.el.style.boxShadow = ''; }, 200);
+      }
+    }
+    document.addEventListener('touchend', end);
+    document.addEventListener('touchcancel', end);
+  })();
   function syncShade(){ $('panelShade').classList.toggle('show', !!document.querySelector('.screen.panel.show')); }
   // 패널 바깥(어두운 부분)을 누르면 패널을 모두 닫는다
   $('panelShade').addEventListener('click', function(){
@@ -1480,7 +1578,12 @@
       }, { title:'새 시설물 종류', ok:'추가', hint:'예) 지하차도, 옹벽' });
     });
     box.appendChild(add);
-    var on = box.querySelector('.chip.on'); if(on && on.scrollIntoView) on.scrollIntoView({ block:'nearest', inline:'nearest' });
+    // 고른 종류 칩이 보이게 가로로만 맞춘다 (scrollIntoView는 화면 전체를 맨 위로 올려 버림)
+    var on = box.querySelector('.chip.on');
+    if(on){
+      if(on.offsetLeft < box.scrollLeft) box.scrollLeft = on.offsetLeft - 8;
+      else if(on.offsetLeft + on.offsetWidth > box.scrollLeft + box.clientWidth) box.scrollLeft = on.offsetLeft + on.offsetWidth - box.clientWidth + 8;
+    }
 
     var c = tm.cat, m = tm.mem;
     $('tmCatHint').textContent = c ? '부재 ' + c.members.length + '개 · 시설명 ' + c.sites.length + '개' + (c === curCat() ? ' · 촬영 중인 종류' : '') : '';
@@ -1888,6 +1991,7 @@
 
   /* ================= 손상 선택 시트 ================= */
   var nsEditor = makeEditor($('nsBody'), {
+    multi: false,   // 촬영 중 손상 고르기 창은 간단하게
     arr: function(){ return noteHolder().arr; },
     str: function(x){ return x; },
     isOn: function(x){ return x === values.note; },
