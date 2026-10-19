@@ -5,6 +5,7 @@ import CoreLocation
 import AVFoundation
 import MediaPlayer
 import AVKit
+import CoreMotion
 
 /// GitHub Pages의 보드판 웹페이지를 띄우는 화면.
 /// 실행할 때마다 최신 페이지를 받아 저장해 두고, 인터넷이 없으면 마지막으로 받은 페이지를 연다.
@@ -20,6 +21,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     private let session = AVCaptureSession()
     private let photoOutput = AVCapturePhotoOutput()
     private let camQueue = DispatchQueue(label: "board.camera")
+    /// 화면 회전 잠금이 켜져 있어도 폰을 실제로 어느 쪽으로 들었는지 알기 위한 기울기 센서
+    private let motion = CMMotionManager()
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var camConfigured = false
     private var camDevice: AVCaptureDevice?
@@ -231,6 +234,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
 
     private func startCamera() {
         cameraOnScreen = true
+        if motion.isAccelerometerAvailable && !motion.isAccelerometerActive {
+            motion.accelerometerUpdateInterval = 0.2
+            motion.startAccelerometerUpdates()
+        }
         camQueue.async { self.wantCamera = true }
         AVCaptureDevice.requestAccess(for: .video) { granted in
             guard granted else { return self.js("window.__camState && window.__camState(false)") }
@@ -423,6 +430,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     }
 
     private func stopCamera() {
+        motion.stopAccelerometerUpdates()
         cameraOnScreen = false
         setShutterButtons(false)
         previewLayer?.isHidden = true
@@ -440,9 +448,18 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         camQueue.async { self.photoOutput.connection(with: .video)?.videoOrientation = orientation }
     }
 
+    /// 폰을 실제로 든 방향(가로 왼쪽·오른쪽). 화면이 반대로 돌아가 있어도(회전 잠금 등) 사진은 바로 선 방향으로 찍히게 한다.
+    /// 중력(x)이 음수면 폰 오른쪽 옆면이 위 = 홈 쪽이 오른쪽인 가로 → 카메라 방향 .landscapeRight(홈 버튼 오른쪽)
+    private func heldOrientation() -> AVCaptureVideoOrientation? {
+        guard let a = motion.accelerometerData?.acceleration, abs(a.x) > 0.5, abs(a.x) > abs(a.y) else { return nil }
+        return a.x < 0 ? .landscapeRight : .landscapeLeft
+    }
+
     private func capturePhoto(maxW: CGFloat, id: Int) {
+        let held = heldOrientation()
         camQueue.async {
             guard self.session.isRunning else { return self.js("window.__camShot && window.__camShot(null, false, \(id))") }
+            if let held = held { self.photoOutput.connection(with: .video)?.videoOrientation = held }
             let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
             self.captures[settings.uniqueID] = (maxW, id)
             if self.photoOutput.supportedFlashModes.contains(.on) { settings.flashMode = self.flashOn ? .on : .off }

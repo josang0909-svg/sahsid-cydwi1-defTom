@@ -239,6 +239,13 @@
   .dmg-btn.other,.comp-btn.other{background:transparent;border-style:dashed;color:var(--accent);text-align:center;}
   .loc-btn{flex:none;display:flex;flex-direction:column;gap:1px;width:100%;padding:8px 10px;border-radius:var(--r-btn);
     border:1px solid var(--accent-dim);background:var(--card);color:var(--text);text-align:left;}
+  .loc-pair{flex:none;display:grid;grid-template-columns:48px minmax(0,1fr);gap:6px;}
+  .loc-pair .loc-btn{min-width:0;padding:7px 8px;justify-content:center;}
+  .loc-btn.new-dmg{align-items:center;text-align:center;padding:7px 2px;}
+  .loc-btn.new-dmg small{letter-spacing:0;}
+  .loc-btn.new-dmg span{color:var(--accent);font-size:20px;line-height:1;}
+  /* 위치 값은 칸이 좁아도 두 줄까지 보이게 */
+  .loc-pair #qLoc span{font-size:13.5px;white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2;}
   .loc-btn small{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.1em;}
   .loc-btn span{font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .shot-box{flex:none;display:flex;justify-content:center;align-items:center;gap:10px;padding-top:6px;position:relative;}
@@ -766,7 +773,10 @@
   </div>
 
   <aside class="rail rail-r">
-    <button class="loc-btn" id="qLoc"><small>위치</small><span>-</span></button>
+    <div class="loc-pair">
+      <button class="loc-btn new-dmg" id="qNewNote" type="button"><small>신규</small><span>＋</span></button>
+      <button class="loc-btn" id="qLoc"><small>위치</small><span>-</span></button>
+    </div>
     <div class="rail-t">손상명</div>
     <div class="rail-list" id="bottomBar"></div>
     <div class="shot-box"><button class="photos-btn" id="photosBtn" type="button" aria-label="사진 앱"></button><button class="capture-btn" id="captureBtn"><span class="dot"></span></button></div>
@@ -1519,7 +1529,9 @@
   }
   function addNotes(list){
     var m = tm.mem, added = 0;
-    list.forEach(function(v){ if(m.notes.indexOf(v) < 0){ m.notes.push(v); added++; } });
+    // 새 손상은 맨 위에 (여러 개면 적은 순서 그대로)
+    var fresh = list.filter(function(v){ return m.notes.indexOf(v) < 0; });
+    m.notes.unshift.apply(m.notes, fresh); added = fresh.length;
     return added;
   }
 
@@ -1737,7 +1749,7 @@
   $('noteAdd').addEventListener('click', function(){
     var v = $('noteNew').value.trim();
     if(!v || !detailMember) return;
-    if(detailMember.notes.indexOf(v) < 0) detailMember.notes.push(v);
+    if(detailMember.notes.indexOf(v) < 0) detailMember.notes.unshift(v);
     saveTree(); $('noteNew').value = ''; noteEditor.draw(); memEditor.draw();
   });
   $('delMemberBtn').addEventListener('click', function(){
@@ -1858,7 +1870,7 @@
       b.className = 'comp-btn' + (values.member === m.name ? ' active' : '');
       b.textContent = splitLines(m.name).join('\n');
       b.addEventListener('click', function(){
-        values.member = m.name; values.note = ''; values.loc = '';
+        values.member = m.name; values.note = '';   // 위치는 마지막 값 그대로 (부재를 바꿔도 유지)
         saveValues(); renderCam();
       });
       box.appendChild(b);
@@ -2006,7 +2018,7 @@
     var v = $('nsNew').value.trim();
     if(!v) return;
     var arr = noteHolder().arr;
-    if(arr.indexOf(v) < 0) arr.push(v);
+    if(arr.indexOf(v) < 0) arr.unshift(v);   // 새 손상은 맨 위에
     saveTree(); $('nsNew').value = '';
     nsEditor.draw(); refreshAll();
   });
@@ -2020,6 +2032,18 @@
   /* ================= 위치 입력 시트 ================= */
   var locFormIdx = 0;
   $('qLoc').addEventListener('click', openLocSheet);
+  // 신규 손상: 입력하면 목록 맨 위에 넣고 바로 보드판에 적용한 뒤 촬영 화면으로
+  $('qNewNote').addEventListener('click', function(){
+    editText('', function(v){
+      v = v.trim(); if(!v) return;
+      var arr = noteHolder().arr, i = arr.indexOf(v);
+      if(i >= 0) arr.splice(i, 1);
+      arr.unshift(v);
+      values.note = v;
+      saveTree(); saveValues(); renderCam();
+      showToast('"' + oneLine(v) + '" 적용');
+    }, { title: '신규 손상 (' + oneLine(noteHolder().name) + ')', ok: '적용', hint: '입력하면 손상 목록 맨 위에 추가되고 바로 보드판에 들어갑니다. 엔터는 줄바꿈입니다.' });
+  });
 
   function openLocSheet(){
     var m = curMember();
@@ -2207,6 +2231,8 @@
     var inp = document.createElement('textarea');
     inp.rows = 1;
     inp.placeholder = '위치 직접 입력';
+    inp.setAttribute('autocapitalize', 'characters');
+    inp.style.textTransform = 'uppercase';
     inp.value = values.loc || '';
     row.appendChild(inp);
     wrap.appendChild(row);
@@ -2215,7 +2241,7 @@
     ok.className = 'big-btn';
     ok.textContent = '확인';
     ok.addEventListener('click', function(){
-      var v = inp.value.trim();
+      var v = inp.value.trim().toUpperCase();   // 소문자로 쳐도 보드판엔 대문자
       if(!v){ showToast('위치를 입력하세요'); return; }
       applyLoc(m, v);
     });
