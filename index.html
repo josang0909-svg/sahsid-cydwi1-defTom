@@ -1870,7 +1870,9 @@
       b.className = 'comp-btn' + (values.member === m.name ? ' active' : '');
       b.textContent = splitLines(m.name).join('\n');
       b.addEventListener('click', function(){
-        values.member = m.name; values.note = '';   // 위치는 마지막 값 그대로 (부재를 바꿔도 유지)
+        // 위치는 이 부재에서 마지막으로 썼던 값 (없으면 빈칸)
+        if(values.member !== m.name) values.loc = (m.recent && m.recent[0]) || '';
+        values.member = m.name; values.note = '';
         saveValues(); renderCam();
       });
       box.appendChild(b);
