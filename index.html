@@ -161,6 +161,13 @@
   textarea{resize:none;overflow:hidden;font-family:inherit;display:block;}
   #txtSheet{z-index:80;}   /* 이름 수정 창은 손상 목록 등 다른 창보다 항상 위에 */
   .add-row{align-items:flex-start;}
+  /* 입력 바로가기: 입력칸 아래 한 줄 (키보드 바로 위쪽), 넘치면 옆으로 밀기 */
+  .snip-bar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-4px 0 10px;}
+  .snip-bar::-webkit-scrollbar{display:none;}
+  .snip-bar:empty{display:none;}
+  .snip-bar button{flex:none;padding:8px 12px;border-radius:8px;border:1px solid var(--accent-dim);background:var(--card-2);color:var(--text);font-size:14px;font-weight:700;}
+  .snip-bar button:active{background:var(--accent);color:var(--on-accent);}
+  .snip-edit{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:var(--field, var(--card));color:var(--text);font-size:16px;line-height:1.5;user-select:text;resize:vertical;}
   .add-row input:focus{outline:none;border-color:var(--accent);}
   .add-row button{padding:11px 16px;border-radius:9px;border:none;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:13.5px;min-height:42px;}
 
@@ -298,6 +305,9 @@
   html.live-cam #camFrame{background:transparent;}
   /* 카메라가 켜져도 뷰파인더 바깥(노치·홈 막대 여백 포함)은 켜기 전과 같은 배경색으로 둔다 */
   html.live-cam #camFrame{box-shadow:0 0 0 100vmax var(--bg);}
+  /* 블러 배경(아이폰 앱 1.0.36+): 뷰파인더 바깥은 앱이 깔아 둔 흐린 카메라 화면이 비친다 */
+  html.live-cam.cam-blur #camFrame{box-shadow:none;}
+  html.live-cam.cam-blur #cam .rail{background:rgba(0,0,0,.22);}
   .rail{position:relative;z-index:1;}
   #camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
   #cam.live.web #camVideo{display:block;}
@@ -559,6 +569,14 @@
     </div>
 
     <div class="sec">
+      <div class="t">입력 바로가기 (손상명 · 위치 입력창 위 버튼)</div>
+      <div class="card" style="padding:12px;">
+        <textarea id="snipEdit" rows="4" class="snip-edit"></textarea>
+        <div class="hintline" style="margin:8px 0 0;">한 줄에 하나씩. 누르면 커서 자리에 들어가고, = 가 있으면 = 뒤에 커서가 놓여 숫자만 치면 됩니다. 예: (H=cm)</div>
+      </div>
+    </div>
+
+    <div class="sec">
       <div class="t">항목명 (좌측 칸 문구)</div>
       <div class="card" id="labelBox"></div>
     </div>
@@ -582,7 +600,7 @@
   <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>화면 설정</h2></div>
   <div class="cam-mock-wrap"><div class="cam-mock-box" id="uiMockBox"><div class="cam-mock" id="uiMock"></div></div></div>
   <div class="scr-body two">
-    <div class="hintline full">값을 바꾸면 바로 적용되고 이 기기에 저장됩니다.</div>
+    <div class="hintline full">값을 바꾸면 바로 적용되고 이 기기에만 저장됩니다 (클라우드 백업 안 함). 노치·홈 바 여백은 기기에 맞춰 자동으로 피합니다.</div>
     <div class="col">
       <div class="sec"><div class="t">촬영 화면</div><div class="card" id="uiCam"></div></div>
     </div>
@@ -599,7 +617,7 @@
   <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>계정 · 데이터 백업</h2></div>
   <div class="scr-body">
     <div id="acctOut">
-      <div class="hintline">로그인하면 시설물 종류 · 부재명 · 손상명 · 시설명 · 위치 양식과 보드판 · 화면 설정을 클라우드에 백업하고, 다른 기기나 앱을 다시 설치한 뒤에도 불러올 수 있습니다.</div>
+      <div class="hintline">로그인하면 시설물 종류 · 부재명 · 손상명 · 시설명 · 위치 양식과 보드판 설정을 클라우드에 백업하고, 다른 기기나 앱을 다시 설치한 뒤에도 불러올 수 있습니다. 화면 설정은 기기마다 따로 이 기기에만 저장됩니다.</div>
       <div class="sec">
         <div class="t">이메일</div>
         <div class="add-row"><input type="email" id="acctEmail" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
@@ -822,6 +840,7 @@
     <div class="sheet-head"><h3 id="txtTitle">수정</h3><button data-closesheet="txtSheet">취소</button></div>
     <div class="sheet-body">
       <div class="add-row"><textarea id="txtIn" rows="1"></textarea><button id="txtOk">저장</button></div>
+      <div class="snip-bar" id="txtSnips"></div>
       <div class="hintline" id="txtHint">엔터를 누르면 줄이 바뀝니다. 보드판에도 그대로 줄이 바뀌어 찍힙니다.</div>
     </div>
   </div>
@@ -908,10 +927,12 @@
   var SET_DEFAULT = {
     bg:'white', size:100, pos:'bl', res:2048, gps:false, saveOrig:true,
     rowH:1.2, margin:0, align:'dist', weight:700, pt:21.5, font:'system', fontV:2,
-    labels:['일자','시설명','부재명','위치','내용']
+    labels:['일자','시설명','부재명','위치','내용'],
+    snips:['mm','cm','(H=cm)','(T=cm)','(B=cm)']
   };
   var settings = load('bd_settings', SET_DEFAULT);
   if(!settings.labels || settings.labels.length !== 5) settings.labels = SET_DEFAULT.labels.slice();
+  if(!Array.isArray(settings.snips)) settings.snips = SET_DEFAULT.snips.slice();
   // 10.13: 글씨는 다시 굵게, 크기는 10.12와 10.13의 중간(pt 단위)으로
   var rawSet = {}; try{ rawSet = JSON.parse(localStorage.getItem('bd_settings') || '{}') || {}; }catch(e){}
   if(rawSet.fontV !== 2){
@@ -1055,9 +1076,32 @@
     $('txtHint').textContent = opt.hint || TXT_HINT;
     $('txtOk').textContent = opt.ok || '저장';
     var t = $('txtIn'); t.value = cur;
+    renderSnips($('txtSnips'), t);
     $('txtSheet').classList.add('show');
     autoGrow(t);
     setTimeout(function(){ t.focus(); }, 120);
+  }
+  /* 입력 바로가기 버튼: 커서 자리에 넣는다. '=' 가 있으면 '=' 바로 뒤에 커서 (예: (H=cm) → (H=|cm)).
+     누를 때 입력칸 포커스를 뺏지 않아 키보드가 내려가지 않는다 */
+  function renderSnips(bar, inp){
+    bar.innerHTML = '';
+    (settings.snips || []).forEach(function(sn){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = sn;
+      b.addEventListener('pointerdown', function(e){ e.preventDefault(); });
+      b.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      b.addEventListener('click', function(e){
+        e.preventDefault();
+        var a = inp.selectionStart != null ? inp.selectionStart : inp.value.length;
+        var z = inp.selectionEnd != null ? inp.selectionEnd : a;
+        inp.value = inp.value.slice(0, a) + sn + inp.value.slice(z);
+        var eq = sn.indexOf('=');
+        var c = a + (eq >= 0 ? eq + 1 : sn.length);
+        inp.focus(); inp.setSelectionRange(c, c);
+        inp.dispatchEvent(new Event('input'));
+      });
+      bar.appendChild(b);
+    });
   }
   $('txtOk').addEventListener('click', function(){
     $('txtSheet').classList.remove('show');
@@ -1463,7 +1507,12 @@
     requestAnimationFrame(function(){ fillPrev($('boardPrev')); });   // 화면이 뜬 뒤 실제 폭으로 다시
     $('gpsToggle').checked = !!settings.gps;
     $('origToggle').checked = settings.saveOrig !== false;
+    $('snipEdit').value = (settings.snips || []).join('\n');
   }
+  $('snipEdit').addEventListener('change', function(){
+    settings.snips = $('snipEdit').value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean);
+    saveSettings(); showToast('입력 바로가기 저장');
+  });
   $('gpsToggle').addEventListener('change', function(){
     settings.gps = $('gpsToggle').checked; saveSettings();
     if(!settings.gps) stopGeo();
@@ -2327,6 +2376,10 @@
     inp.value = values.loc || '';
     row.appendChild(inp);
     wrap.appendChild(row);
+    var snips = document.createElement('div');
+    snips.className = 'snip-bar';
+    renderSnips(snips, inp);
+    wrap.appendChild(snips);
 
     var ok = document.createElement('button');
     ok.className = 'big-btn';
@@ -3487,6 +3540,9 @@
     setC('--accent-dim', c.accent ? mixColor(c.accent, c.bg || '#181616', 0.55) : '');
     setC('--on-accent', c.bg);
     document.documentElement.classList.toggle('grid-on', ui.grid !== false);
+    var blurOk = nativeApp && window.__boardApp && window.__boardApp.blur;
+    document.documentElement.classList.toggle('cam-blur', !!blurOk && ui.blur !== false);
+    if(blurOk) window.webkit.messageHandlers.board.postMessage({ type:'camBlur', on: ui.blur !== false });
     layoutFrame();
     if(typeof fitBtns === 'function') fitBtns();
     if($('scrUi').classList.contains('show')) layoutUiMock();
@@ -3553,6 +3609,13 @@
         cb.checked = ui.grid !== false;
         cb.addEventListener('change', function(){ ui.grid = cb.checked; save('bd_ui', ui); applyUi(); });
         box.appendChild(gr);
+        var bl = document.createElement('div');
+        bl.className = 'setrow';
+        bl.innerHTML = '<span class="lab">양옆 블러 배경 <small style="color:var(--muted);font-weight:600">(앱 1.0.36+)</small></span><input type="checkbox">';
+        var bcb = bl.querySelector('input');
+        bcb.checked = ui.blur !== false;
+        bcb.addEventListener('change', function(){ ui.blur = bcb.checked; save('bd_ui', ui); applyUi(); });
+        box.appendChild(bl);
       }
       UI_ROWS.forEach(function(row){
         if(row[0] !== g) return;
@@ -3701,7 +3764,8 @@
     return 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(FB.projectId) + '/databases/(default)/documents/' +
       FB.col + '/' + encodeURIComponent(acct.uid);
   }
-  function backupData(){ return JSON.stringify({ v: 1, tree: tree, settings: settings, ui: ui }); }
+  // 화면 설정(bd_ui)은 기기마다 화면 크기·노치가 달라 백업하지 않고 이 기기에만 둔다
+  function backupData(){ return JSON.stringify({ v: 1, tree: tree, settings: settings }); }
   function cloudPush(){
     var data = backupData(), now = Date.now();
     return idToken().then(function(tok){
@@ -3739,7 +3803,6 @@
   function applyCloud(d){
     save('bd_tree', d.tree);
     if(d.settings) save('bd_settings', d.settings);
-    if(d.ui) save('bd_ui', d.ui);
     acct.at = d.savedAt; acct.dirty = false; saveAcct();
     location.reload();
   }
@@ -3808,7 +3871,7 @@
     syncBusy(true); setSyncState('클라우드에서 받는 중…');
     cloudPull().then(function(d){
       if(!d){ setSyncState('클라우드에 백업이 없습니다. 먼저 [지금 백업]을 눌러 주세요.', true); return; }
-      if(!confirm(fmtAt(d.savedAt) + ' 백업으로 바꿀까요?\n' + countText(d) + ' + 보드판·화면 설정\n(이 기기의 목록·설정이 백업 내용으로 바뀝니다)')){ setSyncState(''); return; }
+      if(!confirm(fmtAt(d.savedAt) + ' 백업으로 바꿀까요?\n' + countText(d) + ' + 보드판 설정\n(이 기기의 목록·설정이 백업 내용으로 바뀝니다)')){ setSyncState(''); return; }
       applyCloud(d);
     }).catch(function(e){ setSyncState(errText(e), true); }).then(function(){ syncBusy(false); });
   });

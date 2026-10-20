@@ -6,13 +6,15 @@ import AVFoundation
 import MediaPlayer
 import AVKit
 import CoreMotion
+import CoreImage
 
 /// GitHub Pages의 보드판 웹페이지를 띄우는 화면.
 /// 실행할 때마다 최신 페이지를 받아 저장해 두고, 인터넷이 없으면 마지막으로 받은 페이지를 연다.
 /// 사진 저장·GPS·실시간 카메라는 웹페이지가 아니라 아이폰 기능으로 처리한다.
 /// 카메라 화면은 웹뷰 뒤에 깔고, 촬영 화면에서는 웹페이지 배경이 투명해져 카메라가 비쳐 보인다.
 final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate,
-                                 CLLocationManagerDelegate, AVCapturePhotoCaptureDelegate {
+                                 CLLocationManagerDelegate, AVCapturePhotoCaptureDelegate,
+                                 AVCaptureVideoDataOutputSampleBufferDelegate {
     static let remoteURL = URL(string: "https://josang0909-svg.github.io/sahsid-cydwi1-defTom/index.html")!
 
     private var webView: WKWebView!
@@ -47,8 +49,19 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     /// 웹페이지가 알려 준 뷰파인더(4:3) 위치. 카메라 미리보기를 이 자리에만 띄운다.
     private var camRect: CGRect?
 
+    /// 기본 카메라처럼 뷰파인더 바깥(양옆 칸)에 깔리는 흐린 카메라 화면.
+    /// 작은 크기로 줄인 프레임을 흐리게 만들어 화면 전체에 깐다 (초당 8장 정도라 배터리 부담이 적다)
+    private let blurOutput = AVCaptureVideoDataOutput()
+    private let blurQueue = DispatchQueue(label: "board.blur")
+    private let ciContext = CIContext()
+    private let blurLayer = CALayer()
+    private var blurWanted = true          // blurQueue에서만 읽는다 (웹페이지 화면 설정 켬/끔)
+    private var lastBlurTime: CFTimeInterval = 0
+
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
+    /// 촬영 화면(가로)에서는 홈 바를 한 번 쓸어서는 앱이 넘어가지 않게 (한 번 더 쓸어야 넘어감)
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { orientMask == .portrait ? [] : .all }
     /// 홈·설정은 세로, 촬영 화면은 가로 (웹페이지가 orient 메시지로 바꾼다)
     private var orientMask: UIInterfaceOrientationMask = .portrait
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { orientMask }
@@ -68,7 +81,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, photos: true, focus: true, http: true, orient: true };",
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, photos: true, focus: true, http: true, orient: true, blur: true };",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
@@ -113,6 +126,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         previewLayer?.frame = camRect ?? view.bounds
+        blurLayer.frame = view.bounds
         CATransaction.commit()
     }
 
@@ -200,6 +214,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
         case "camZoom":
             if let z = body["z"] as? Double { setZoom(z) }
+        case "camBlur":
+            let on = body["on"] as? Bool ?? true
+            blurQueue.async { self.blurWanted = on }
+            blurLayer.isHidden = !on || !cameraOnScreen
         case "camRect":
             if let x = body["x"] as? Double, let y = body["y"] as? Double,
                let w = body["w"] as? Double, let h = body["h"] as? Double, w > 0, h > 0 {
@@ -215,6 +233,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     private func setOrientation(_ mask: UIInterfaceOrientationMask) {
         guard mask != orientMask else { return }
         orientMask = mask
+        setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         if #available(iOS 16.0, *) {
             setNeedsUpdateOfSupportedInterfaceOrientations()
             view.window?.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { _ in }
@@ -256,6 +275,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 DispatchQueue.main.async {
                     guard self.cameraOnScreen else { return }   // 그 사이 촬영 화면을 나갔으면 그대로 둔다
                     self.previewLayer?.isHidden = false
+                    self.blurQueue.async {
+                        let on = self.blurWanted
+                        DispatchQueue.main.async { self.blurLayer.isHidden = !on || !self.cameraOnScreen }
+                    }
                     self.setShutterButtons(true)
                     self.updateCameraOrientation()
                     self.webView.evaluateJavaScript("window.__camState && window.__camState(true)")
@@ -289,6 +312,12 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         session.sessionPreset = .photo
         let ok = session.canAddInput(input) && session.canAddOutput(photoOutput)
         if ok { session.addInput(input); session.addOutput(photoOutput) }
+        if ok && session.canAddOutput(blurOutput) {
+            blurOutput.alwaysDiscardsLateVideoFrames = true
+            blurOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+            blurOutput.setSampleBufferDelegate(self, queue: blurQueue)
+            session.addOutput(blurOutput)
+        }
         session.commitConfiguration()
         guard ok else { return }   // 실패하면 다음에 다시 시도
         camConfigured = true
@@ -297,6 +326,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             layer.videoGravity = .resizeAspectFill
             self.view.layer.insertSublayer(layer, at: 0)
             self.previewLayer = layer
+            self.blurLayer.contentsGravity = .resizeAspectFill
+            self.blurLayer.backgroundColor = UIColor.black.cgColor
+            self.blurLayer.isHidden = true
+            self.view.layer.insertSublayer(self.blurLayer, at: 0)   // 미리보기보다 뒤
             self.applyPreviewFrame()
         }
     }
@@ -434,6 +467,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         cameraOnScreen = false
         setShutterButtons(false)
         previewLayer?.isHidden = true
+        blurLayer.isHidden = true
+        blurLayer.contents = nil
         camQueue.async {
             self.wantCamera = false
             if self.session.isRunning { self.session.stopRunning() }
@@ -445,7 +480,31 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         let orientation: AVCaptureVideoOrientation =
             view.window?.windowScene?.interfaceOrientation == .landscapeLeft ? .landscapeLeft : .landscapeRight
         previewLayer?.connection?.videoOrientation = orientation
-        camQueue.async { self.photoOutput.connection(with: .video)?.videoOrientation = orientation }
+        camQueue.async {
+            self.photoOutput.connection(with: .video)?.videoOrientation = orientation
+            self.blurOutput.connection(with: .video)?.videoOrientation = orientation
+        }
+    }
+
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        guard blurWanted, let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        let now = CACurrentMediaTime()
+        guard now - lastBlurTime > 0.12 else { return }
+        lastBlurTime = now
+        let src = CIImage(cvPixelBuffer: pb)
+        let k = 160 / max(src.extent.width, 1)
+        let small = src.transformed(by: CGAffineTransform(scaleX: k, y: k))
+        let out = small.clampedToExtent()
+            .applyingGaussianBlur(sigma: 7)
+            .applyingFilter("CIColorControls", parameters: [kCIInputBrightnessKey: -0.12, kCIInputSaturationKey: 0.9])
+            .cropped(to: small.extent)
+        guard let cg = ciContext.createCGImage(out, from: small.extent) else { return }
+        DispatchQueue.main.async {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.blurLayer.contents = cg
+            CATransaction.commit()
+        }
     }
 
     /// 폰을 실제로 든 방향(가로 왼쪽·오른쪽). 화면이 반대로 돌아가 있어도(회전 잠금 등) 사진은 바로 선 방향으로 찍히게 한다.
