@@ -108,24 +108,69 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         loadPage()
     }
 
-    /// 웹뷰 입력칸의 키보드 위 막대를 바로가기 막대로 바꾼다.
-    /// 웹뷰 안쪽 입력 담당 뷰(WKContentView)를 이 막대를 돌려주는 하위 클래스로 바꿔 끼우는 방식 (iOS 공개 API로는 바꿀 수 없음)
+    /// 웹뷰 입력칸의 키보드 위 막대를 바로가기 막대로 바꾼다 (손상명 입력칸일 때만, 나머지는 원래 ^ ∨ 완료 막대).
+    /// 웹뷰 안쪽 입력 담당 뷰(WKContentView)를 하위 클래스로 바꿔 끼워 막대와 키보드 종류를 정한다 (iOS 공개 API로는 바꿀 수 없음)
     private static var snipBarRef: UIView?
+    private static var snipOn = false        // 지금 입력칸이 손상명이면 true (웹페이지가 알려 줌)
+    private static var wantNumbers = false   // 바로가기를 누른 뒤 숫자 자판(123)으로
+    private weak var contentView: UIView?
     private func installSnipBar() {
         Self.snipBarRef = snipBar
         guard let content = webView.scrollView.subviews.first(where: { String(describing: type(of: $0)).hasPrefix("WKContent") }) else { return }
+        contentView = content
         let base: AnyClass = type(of: content)
         let name = "\(NSStringFromClass(base))_BoardSnips"
         if NSStringFromClass(base) == name { return }
         var cls: AnyClass? = NSClassFromString(name)
         if cls == nil, let made = objc_allocateClassPair(base, name, 0) {
-            let block: @convention(block) (AnyObject) -> UIView? = { _ in BoardViewController.snipBarRef }
-            class_addMethod(made, #selector(getter: UIResponder.inputAccessoryView),
-                            imp_implementationWithBlock(block), "@@:")
+            typealias ObjGetter = @convention(c) (AnyObject, Selector) -> AnyObject?
+            typealias IntGetter = @convention(c) (AnyObject, Selector) -> Int
+            // 키보드 위 막대: 손상명일 때만 바로가기, 아니면 원래 막대
+            let accSel = #selector(getter: UIResponder.inputAccessoryView)
+            let accOrig = class_getInstanceMethod(base, accSel).map { unsafeBitCast(method_getImplementation($0), to: ObjGetter.self) }
+            let acc: @convention(block) (AnyObject) -> AnyObject? = { me in
+                if BoardViewController.snipOn { return BoardViewController.snipBarRef }
+                return accOrig?(me, accSel)
+            }
+            class_addMethod(made, accSel, imp_implementationWithBlock(acc), "@@:")
+            // 키보드 종류: 바로가기를 누른 뒤에는 숫자·기호 자판 (한글 자판의 123 화면, ㄱㄴㄷ 키로 돌아감)
+            let numType = UIKeyboardType.numbersAndPunctuation.rawValue
+            let trSel = NSSelectorFromString("textInputTraits")
+            if let m = class_getInstanceMethod(base, trSel) {
+                let orig = unsafeBitCast(method_getImplementation(m), to: ObjGetter.self)
+                let tr: @convention(block) (AnyObject) -> AnyObject? = { me in
+                    let t = orig(me, trSel)
+                    if BoardViewController.wantNumbers, let o = t as? NSObject, o.responds(to: NSSelectorFromString("setKeyboardType:")) {
+                        o.setValue(numType, forKey: "keyboardType")
+                    }
+                    return t
+                }
+                class_addMethod(made, trSel, imp_implementationWithBlock(tr), "@@:")
+            }
+            let kbSel = NSSelectorFromString("keyboardType")
+            if let m = class_getInstanceMethod(base, kbSel) {
+                let orig = unsafeBitCast(method_getImplementation(m), to: IntGetter.self)
+                let kb: @convention(block) (AnyObject) -> Int = { me in
+                    BoardViewController.wantNumbers ? numType : orig(me, kbSel)
+                }
+                class_addMethod(made, kbSel, imp_implementationWithBlock(kb), "q@:")
+            }
             objc_registerClassPair(made)
             cls = made
         }
         if let cls = cls { object_setClass(content, cls) }
+    }
+
+    private func setSnipOn(_ on: Bool) {
+        Self.wantNumbers = false
+        guard on != Self.snipOn else { return }
+        Self.snipOn = on
+        contentView?.reloadInputViews()
+    }
+
+    private func keyboardToNumbers() {
+        Self.wantNumbers = true
+        contentView?.reloadInputViews()
     }
 
     override func viewDidLayoutSubviews() {
@@ -134,6 +179,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     }
 
     @objc private func keyboardDidHide() {
+        Self.wantNumbers = false
         webView.scrollView.setZoomScale(1, animated: false)
         webView.scrollView.setContentOffset(.zero, animated: false)
         webView.evaluateJavaScript("window.scrollTo(0,0)")
@@ -232,6 +278,10 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             if let z = body["z"] as? Double { setZoom(z) }
         case "snips":
             snipBar.setItems(body["list"] as? [String] ?? [])
+        case "snipOn":
+            setSnipOn(body["on"] as? Bool ?? false)
+        case "kbNumbers":
+            keyboardToNumbers()
         case "camRect":
             if let x = body["x"] as? Double, let y = body["y"] as? Double,
                let w = body["w"] as? Double, let h = body["h"] as? Double, w > 0, h > 0 {

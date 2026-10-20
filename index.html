@@ -566,10 +566,10 @@
     </div>
 
     <div class="sec">
-      <div class="t">입력 바로가기 (손상명 · 위치 입력창 위 버튼)</div>
+      <div class="t">입력 바로가기 (손상명 입력할 때 키보드 위 버튼)</div>
       <div class="card" style="padding:12px;">
         <textarea id="snipEdit" rows="4" class="snip-edit"></textarea>
-        <div class="hintline" style="margin:8px 0 0;">한 줄에 하나씩. 아이폰 앱은 키보드 바로 위 막대에, 웹은 입력칸 아래에 뜹니다. 누르면 커서 자리에 들어가고, = 가 있으면 = 뒤에 커서가 놓여 숫자만 치면 됩니다. 예: (H=cm)</div>
+        <div class="hintline" style="margin:8px 0 0;">한 줄에 하나씩. 아이폰 앱은 키보드 바로 위 막대에, 웹은 입력칸 아래에 뜹니다. 누르면 커서 자리에 들어가고(= 가 있으면 = 뒤), 키보드가 숫자 자판으로 바뀝니다. 예: (H=cm)</div>
       </div>
     </div>
 
@@ -667,7 +667,7 @@
       <div class="sec">
         <div class="t"><span id="tmNoteT">손상명</span></div>
         <div class="add-row">
-          <textarea id="tmNoteNew" rows="1" placeholder="새 손상명 입력"></textarea>
+          <textarea id="tmNoteNew" data-snips="1" rows="1" placeholder="새 손상명 입력"></textarea>
           <button id="tmNoteAdd" type="button">추가</button>
         </div>
         <div class="editor" id="tmNoteBody"></div>
@@ -738,7 +738,7 @@
       <div class="t">손상(내용) 목록</div>
       <div class="hintline">순서대로 촬영 화면 오른쪽 손상 목록에 표시됩니다.</div>
       <div class="add-row">
-        <textarea id="noteNew" rows="1" placeholder="새 손상 항목 입력"></textarea>
+        <textarea id="noteNew" data-snips="1" rows="1" placeholder="새 손상 항목 입력"></textarea>
         <button id="noteAdd">추가</button>
       </div>
       <div class="editor" id="noteBody"></div>
@@ -1073,7 +1073,8 @@
     $('txtHint').textContent = opt.hint || TXT_HINT;
     $('txtOk').textContent = opt.ok || '저장';
     var t = $('txtIn'); t.value = cur;
-    renderSnips($('txtSnips'), t);
+    if(opt.snips) t.dataset.snips = '1'; else delete t.dataset.snips;
+    if(opt.snips) renderSnips($('txtSnips'), t); else $('txtSnips').innerHTML = '';
     $('txtSheet').classList.add('show');
     autoGrow(t);
     setTimeout(function(){ t.focus(); }, 120);
@@ -1105,10 +1106,17 @@
   if(nativeSnips) document.documentElement.classList.add('native-snips');
   window.__snip = function(i){
     var el = document.activeElement, sn = (settings.snips || [])[i];
-    if(!sn || !el || !/^(TEXTAREA|INPUT)$/.test(el.tagName) || el.readOnly) return;
-    if(el.tagName === 'INPUT' && !/^(text|search|)$/.test(el.type)) return;
+    if(!sn || !el || !el.dataset || el.dataset.snips !== '1') return;
     insertSnip(el, sn);
+    // 바로 숫자를 칠 수 있게 키보드를 숫자 자판(123)으로
+    window.webkit.messageHandlers.board.postMessage({ type:'kbNumbers' });
   };
+  // 손상명 입력칸에 들어갈 때만 키보드 위 막대에 바로가기 버튼
+  document.addEventListener('focusin', function(e){
+    if(!nativeSnips) return;
+    var on = !!(e.target && e.target.dataset && e.target.dataset.snips === '1');
+    window.webkit.messageHandlers.board.postMessage({ type:'snipOn', on: on });
+  });
   function sendSnips(){
     if(nativeSnips) window.webkit.messageHandlers.board.postMessage({ type:'snips', list: settings.snips || [] });
   }
@@ -1192,7 +1200,7 @@
               if(!v || v === cur) return;
               cfg.rename(item, v, idx);
               cfg.persist(); draw(); refreshAll();
-            });
+            }, { snips: !!cfg.snips });
           });
           row.appendChild(ed);
         }
@@ -1646,6 +1654,7 @@
     persist: saveTree
   });
   var tmNoteEditor = makeEditor($('tmNoteBody'), {
+    snips: true,   // 손상명: 키보드 위 바로가기 버튼
     arr: function(){ return tm.mem ? tm.mem.notes : []; },
     str: function(x){ return x; },
     tap: function(){},
@@ -1740,7 +1749,7 @@
     editText('', function(v){
       var n = addNotes(lines(v)); if(!n) return;
       saveTree(); drawTree(); refreshAll(); showToast('손상 ' + n + '개 추가');
-    }, { title: tm.mem.name.replace(/\n/g, ' ') + ' · 손상명 여러 개 추가', ok:'추가', hint: BULK_HINT });
+    }, { title: tm.mem.name.replace(/\n/g, ' ') + ' · 손상명 여러 개 추가', ok:'추가', snips: true, hint: BULK_HINT });
   });
   $('tmMemForm').addEventListener('click', function(){
     if(!tm.mem) return;
@@ -1789,6 +1798,7 @@
     persist: saveTree
   });
   var noteEditor = makeEditor($('noteBody'), {
+    snips: true,   // 손상명: 키보드 위 바로가기 버튼
     arr: function(){ return detailMember ? detailMember.notes : []; },
     str: function(x){ return x; },
     tap: function(){},
@@ -2020,7 +2030,7 @@
       h.arr[i] = v;
       if(values.note === old){ values.note = v; saveValues(); }
       saveTree(); renderCam();
-    }, { title: '손상명 수정 (' + oneLine(h.name) + ')' });
+    }, { title: '손상명 수정 (' + oneLine(h.name) + ')', snips: true });
   }
 
   // 부재·손상 버튼: 글자가 버튼 폭을 넘으면 넘지 않을 때까지 글씨를 줄인다 (기본 크기의 55%까지)
@@ -2126,6 +2136,7 @@
 
   /* ================= 손상 선택 시트 ================= */
   var nsEditor = makeEditor($('nsBody'), {
+    snips: true,   // 손상명: 키보드 위 바로가기 버튼
     multi: false,   // 촬영 중 손상 고르기 창은 간단하게
     arr: function(){ return noteHolder().arr; },
     str: function(x){ return x; },
@@ -2165,7 +2176,7 @@
       values.note = v;
       saveTree(); saveValues(); renderCam();
       showToast('"' + oneLine(v) + '" 적용');
-    }, { title: '신규 손상 (' + oneLine(noteHolder().name) + ')', ok: '적용', hint: '입력하면 손상 목록 맨 위에 추가되고 바로 보드판에 들어갑니다. 엔터는 줄바꿈입니다.' });
+    }, { title: '신규 손상 (' + oneLine(noteHolder().name) + ')', ok: '적용', snips: true, hint: '입력하면 손상 목록 맨 위에 추가되고 바로 보드판에 들어갑니다. 엔터는 줄바꿈입니다.' });
   });
 
   // 양식 → 정규식. 교각 받침(P?-Sh?)은 끝에 -1 · -2가 붙어도 같은 양식
@@ -2387,10 +2398,6 @@
     inp.value = values.loc || '';
     row.appendChild(inp);
     wrap.appendChild(row);
-    var snips = document.createElement('div');
-    snips.className = 'snip-bar';
-    renderSnips(snips, inp);
-    wrap.appendChild(snips);
 
     var ok = document.createElement('button');
     ok.className = 'big-btn';
