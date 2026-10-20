@@ -164,7 +164,7 @@
   /* 입력 바로가기: 입력칸 아래 한 줄 (키보드 바로 위쪽), 넘치면 옆으로 밀기 */
   .snip-bar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-4px 0 10px;}
   .snip-bar::-webkit-scrollbar{display:none;}
-  .snip-bar:empty{display:none;}
+  .snip-bar:empty, html.native-snips .snip-bar{display:none;}
   .snip-bar button{flex:none;padding:8px 12px;border-radius:8px;border:1px solid var(--accent-dim);background:var(--card-2);color:var(--text);font-size:14px;font-weight:700;}
   .snip-bar button:active{background:var(--accent);color:var(--on-accent);}
   .snip-edit{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:var(--field, var(--card));color:var(--text);font-size:16px;line-height:1.5;user-select:text;resize:vertical;}
@@ -305,9 +305,6 @@
   html.live-cam #camFrame{background:transparent;}
   /* 카메라가 켜져도 뷰파인더 바깥(노치·홈 막대 여백 포함)은 켜기 전과 같은 배경색으로 둔다 */
   html.live-cam #camFrame{box-shadow:0 0 0 100vmax var(--bg);}
-  /* 블러 배경(아이폰 앱 1.0.36+): 뷰파인더 바깥은 앱이 깔아 둔 흐린 카메라 화면이 비친다 */
-  html.live-cam.cam-blur #camFrame{box-shadow:none;}
-  html.live-cam.cam-blur #cam .rail{background:rgba(0,0,0,.22);}
   .rail{position:relative;z-index:1;}
   #camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
   #cam.live.web #camVideo{display:block;}
@@ -572,7 +569,7 @@
       <div class="t">입력 바로가기 (손상명 · 위치 입력창 위 버튼)</div>
       <div class="card" style="padding:12px;">
         <textarea id="snipEdit" rows="4" class="snip-edit"></textarea>
-        <div class="hintline" style="margin:8px 0 0;">한 줄에 하나씩. 누르면 커서 자리에 들어가고, = 가 있으면 = 뒤에 커서가 놓여 숫자만 치면 됩니다. 예: (H=cm)</div>
+        <div class="hintline" style="margin:8px 0 0;">한 줄에 하나씩. 아이폰 앱은 키보드 바로 위 막대에, 웹은 입력칸 아래에 뜹니다. 누르면 커서 자리에 들어가고, = 가 있으면 = 뒤에 커서가 놓여 숫자만 치면 됩니다. 예: (H=cm)</div>
       </div>
     </div>
 
@@ -1090,19 +1087,32 @@
       b.type = 'button'; b.textContent = sn;
       b.addEventListener('pointerdown', function(e){ e.preventDefault(); });
       b.addEventListener('mousedown', function(e){ e.preventDefault(); });
-      b.addEventListener('click', function(e){
-        e.preventDefault();
-        var a = inp.selectionStart != null ? inp.selectionStart : inp.value.length;
-        var z = inp.selectionEnd != null ? inp.selectionEnd : a;
-        inp.value = inp.value.slice(0, a) + sn + inp.value.slice(z);
-        var eq = sn.indexOf('=');
-        var c = a + (eq >= 0 ? eq + 1 : sn.length);
-        inp.focus(); inp.setSelectionRange(c, c);
-        inp.dispatchEvent(new Event('input'));
-      });
+      b.addEventListener('click', function(e){ e.preventDefault(); insertSnip(inp, sn); });
       bar.appendChild(b);
     });
   }
+  function insertSnip(inp, sn){
+    var a = inp.selectionStart != null ? inp.selectionStart : inp.value.length;
+    var z = inp.selectionEnd != null ? inp.selectionEnd : a;
+    inp.value = inp.value.slice(0, a) + sn + inp.value.slice(z);
+    var eq = sn.indexOf('=');
+    var c = a + (eq >= 0 ? eq + 1 : sn.length);
+    inp.focus(); inp.setSelectionRange(c, c);
+    inp.dispatchEvent(new Event('input'));
+  }
+  // 아이폰 앱 1.0.37+: 바로가기는 키보드 위 막대(^ ∨ 완료 자리)에 뜬다. 막대 버튼을 누르면 앱이 이걸 부른다
+  var nativeSnips = nativeApp && window.__boardApp && window.__boardApp.snipBar;
+  if(nativeSnips) document.documentElement.classList.add('native-snips');
+  window.__snip = function(i){
+    var el = document.activeElement, sn = (settings.snips || [])[i];
+    if(!sn || !el || !/^(TEXTAREA|INPUT)$/.test(el.tagName) || el.readOnly) return;
+    if(el.tagName === 'INPUT' && !/^(text|search|)$/.test(el.type)) return;
+    insertSnip(el, sn);
+  };
+  function sendSnips(){
+    if(nativeSnips) window.webkit.messageHandlers.board.postMessage({ type:'snips', list: settings.snips || [] });
+  }
+  sendSnips();
   $('txtOk').addEventListener('click', function(){
     $('txtSheet').classList.remove('show');
     var cb = txtCb; txtCb = null;
@@ -1511,7 +1521,7 @@
   }
   $('snipEdit').addEventListener('change', function(){
     settings.snips = $('snipEdit').value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean);
-    saveSettings(); showToast('입력 바로가기 저장');
+    saveSettings(); sendSnips(); showToast('입력 바로가기 저장');
   });
   $('gpsToggle').addEventListener('change', function(){
     settings.gps = $('gpsToggle').checked; saveSettings();
@@ -2054,11 +2064,12 @@
   // mode === 'check': 위치만 확인하고 바뀌었을 때만 보드판을 다시 그린다
   function layoutFrame(mode){
     if(!$('cam').classList.contains('show')) return;
-    var cell = $('frameCell').getBoundingClientRect(), pad = 6;
-    var cw = cell.width - pad*2, ch = cell.height - pad*2;
+    // 기본 카메라처럼 화면 위아래 끝까지 꽉 차게 (노치·홈 바 여백 무시, 폭이 모자랄 때만 줄임)
+    var cell = $('frameCell').getBoundingClientRect(), camR = $('cam').getBoundingClientRect();
+    var cw = cell.width, ch = camR.height;
     if(cw <= 0 || ch <= 0) return;
     var fw = Math.min(cw, ch * 4/3), fh = fw * 3/4;
-    var x = Math.round(pad + (cw - fw)/2), y = Math.round(pad + (ch - fh)/2);
+    var x = Math.round((cw - fw)/2), y = Math.round(camR.top - cell.top + (ch - fh)/2);
     fw = Math.round(fw); fh = Math.round(fh);
     var f = $('camFrame');
     f.style.left = x + 'px'; f.style.top = y + 'px'; f.style.width = fw + 'px'; f.style.height = fh + 'px';
@@ -3540,9 +3551,6 @@
     setC('--accent-dim', c.accent ? mixColor(c.accent, c.bg || '#181616', 0.55) : '');
     setC('--on-accent', c.bg);
     document.documentElement.classList.toggle('grid-on', ui.grid !== false);
-    var blurOk = nativeApp && window.__boardApp && window.__boardApp.blur;
-    document.documentElement.classList.toggle('cam-blur', !!blurOk && ui.blur !== false);
-    if(blurOk) window.webkit.messageHandlers.board.postMessage({ type:'camBlur', on: ui.blur !== false });
     layoutFrame();
     if(typeof fitBtns === 'function') fitBtns();
     if($('scrUi').classList.contains('show')) layoutUiMock();
@@ -3589,10 +3597,10 @@
     mk.style.transform = 'scale(' + k + ')';
     var notch = mk.querySelector('.notch'); notch.style.display = st > 30 ? '' : 'none'; notch.style.left = '4px';
     // 가운데 칸에 4:3 뷰파인더 (실제 촬영 화면 layoutFrame과 같은 계산)
-    var cell = mk.querySelector('.frame-cell'), f = mk.querySelector('.mock-frame'), pad = 6;
-    var cw = cell.clientWidth - pad * 2, ch = cell.clientHeight - pad * 2;
+    var cell = mk.querySelector('.frame-cell'), f = mk.querySelector('.mock-frame');
+    var cw = cell.clientWidth, ch = sh;
     var fw = Math.min(cw, ch * 4 / 3), fh = fw * 3 / 4;
-    f.style.left = Math.round(pad + (cw - fw) / 2) + 'px'; f.style.top = Math.round(pad + (ch - fh) / 2) + 'px';
+    f.style.left = Math.round((cw - fw) / 2) + 'px'; f.style.top = Math.round((ch - fh) / 2) + 'px';
     f.style.width = Math.round(fw) + 'px'; f.style.height = Math.round(fh) + 'px';
     if(typeof fitBtnsIn === 'function') fitBtnsIn(mk);
   }
@@ -3609,13 +3617,6 @@
         cb.checked = ui.grid !== false;
         cb.addEventListener('change', function(){ ui.grid = cb.checked; save('bd_ui', ui); applyUi(); });
         box.appendChild(gr);
-        var bl = document.createElement('div');
-        bl.className = 'setrow';
-        bl.innerHTML = '<span class="lab">양옆 블러 배경 <small style="color:var(--muted);font-weight:600">(앱 1.0.36+)</small></span><input type="checkbox">';
-        var bcb = bl.querySelector('input');
-        bcb.checked = ui.blur !== false;
-        bcb.addEventListener('change', function(){ ui.blur = bcb.checked; save('bd_ui', ui); applyUi(); });
-        box.appendChild(bl);
       }
       UI_ROWS.forEach(function(row){
         if(row[0] !== g) return;

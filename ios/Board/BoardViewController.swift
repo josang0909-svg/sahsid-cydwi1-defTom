@@ -6,15 +6,13 @@ import AVFoundation
 import MediaPlayer
 import AVKit
 import CoreMotion
-import CoreImage
 
 /// GitHub Pages의 보드판 웹페이지를 띄우는 화면.
 /// 실행할 때마다 최신 페이지를 받아 저장해 두고, 인터넷이 없으면 마지막으로 받은 페이지를 연다.
 /// 사진 저장·GPS·실시간 카메라는 웹페이지가 아니라 아이폰 기능으로 처리한다.
 /// 카메라 화면은 웹뷰 뒤에 깔고, 촬영 화면에서는 웹페이지 배경이 투명해져 카메라가 비쳐 보인다.
 final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate,
-                                 CLLocationManagerDelegate, AVCapturePhotoCaptureDelegate,
-                                 AVCaptureVideoDataOutputSampleBufferDelegate {
+                                 CLLocationManagerDelegate, AVCapturePhotoCaptureDelegate {
     static let remoteURL = URL(string: "https://josang0909-svg.github.io/sahsid-cydwi1-defTom/index.html")!
 
     private var webView: WKWebView!
@@ -49,14 +47,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     /// 웹페이지가 알려 준 뷰파인더(4:3) 위치. 카메라 미리보기를 이 자리에만 띄운다.
     private var camRect: CGRect?
 
-    /// 기본 카메라처럼 뷰파인더 바깥(양옆 칸)에 깔리는 흐린 카메라 화면.
-    /// 작은 크기로 줄인 프레임을 흐리게 만들어 화면 전체에 깐다 (초당 8장 정도라 배터리 부담이 적다)
-    private let blurOutput = AVCaptureVideoDataOutput()
-    private let blurQueue = DispatchQueue(label: "board.blur")
-    private let ciContext = CIContext()
-    private let blurLayer = CALayer()
-    private var blurWanted = true          // blurQueue에서만 읽는다 (웹페이지 화면 설정 켬/끔)
-    private var lastBlurTime: CFTimeInterval = 0
+    /// 키보드 위 막대(원래 ^ ∨ 완료 자리)에 띄우는 입력 바로가기 버튼. 목록은 웹페이지 설정에서 받는다.
+    private let snipBar = SnipBar()
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
@@ -81,7 +73,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         content.addUserScript(WKUserScript(source: Self.geoShim, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // 웹페이지가 이 앱의 버전과 기능을 알 수 있게 알려 준다 (오래된 앱이면 페이지가 업데이트 안내를 띄움)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, photos: true, focus: true, http: true, orient: true, blur: true };",
+        content.addUserScript(WKUserScript(source: "window.__boardApp = { version: '\(version)', camera: true, photos: true, focus: true, http: true, orient: true, snipBar: true };",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let config = WKWebViewConfiguration()
         config.userContentController = content
@@ -103,12 +95,37 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                                                name: UIResponder.keyboardDidHideNotification, object: nil)
         webView.uiDelegate = self
         view.addSubview(webView)
+        snipBar.onPick = { [weak self] i in
+            self?.webView.evaluateJavaScript("window.__snip && window.__snip(\(i))")
+        }
+        snipBar.onDone = { [weak self] in self?.webView.endEditing(true) }
+        installSnipBar()
 
         setupShutterButtons()
 
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBest
         loadPage()
+    }
+
+    /// 웹뷰 입력칸의 키보드 위 막대를 바로가기 막대로 바꾼다.
+    /// 웹뷰 안쪽 입력 담당 뷰(WKContentView)를 이 막대를 돌려주는 하위 클래스로 바꿔 끼우는 방식 (iOS 공개 API로는 바꿀 수 없음)
+    private static var snipBarRef: UIView?
+    private func installSnipBar() {
+        Self.snipBarRef = snipBar
+        guard let content = webView.scrollView.subviews.first(where: { String(describing: type(of: $0)).hasPrefix("WKContent") }) else { return }
+        let base: AnyClass = type(of: content)
+        let name = "\(NSStringFromClass(base))_BoardSnips"
+        if NSStringFromClass(base) == name { return }
+        var cls: AnyClass? = NSClassFromString(name)
+        if cls == nil, let made = objc_allocateClassPair(base, name, 0) {
+            let block: @convention(block) (AnyObject) -> UIView? = { _ in BoardViewController.snipBarRef }
+            class_addMethod(made, #selector(getter: UIResponder.inputAccessoryView),
+                            imp_implementationWithBlock(block), "@@:")
+            objc_registerClassPair(made)
+            cls = made
+        }
+        if let cls = cls { object_setClass(content, cls) }
     }
 
     override func viewDidLayoutSubviews() {
@@ -126,7 +143,6 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         previewLayer?.frame = camRect ?? view.bounds
-        blurLayer.frame = view.bounds
         CATransaction.commit()
     }
 
@@ -214,10 +230,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             if let url = URL(string: "photos-redirect://") { UIApplication.shared.open(url) }
         case "camZoom":
             if let z = body["z"] as? Double { setZoom(z) }
-        case "camBlur":
-            let on = body["on"] as? Bool ?? true
-            blurQueue.async { self.blurWanted = on }
-            blurLayer.isHidden = !on || !cameraOnScreen
+        case "snips":
+            snipBar.setItems(body["list"] as? [String] ?? [])
         case "camRect":
             if let x = body["x"] as? Double, let y = body["y"] as? Double,
                let w = body["w"] as? Double, let h = body["h"] as? Double, w > 0, h > 0 {
@@ -275,10 +289,6 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 DispatchQueue.main.async {
                     guard self.cameraOnScreen else { return }   // 그 사이 촬영 화면을 나갔으면 그대로 둔다
                     self.previewLayer?.isHidden = false
-                    self.blurQueue.async {
-                        let on = self.blurWanted
-                        DispatchQueue.main.async { self.blurLayer.isHidden = !on || !self.cameraOnScreen }
-                    }
                     self.setShutterButtons(true)
                     self.updateCameraOrientation()
                     self.webView.evaluateJavaScript("window.__camState && window.__camState(true)")
@@ -312,12 +322,6 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         session.sessionPreset = .photo
         let ok = session.canAddInput(input) && session.canAddOutput(photoOutput)
         if ok { session.addInput(input); session.addOutput(photoOutput) }
-        if ok && session.canAddOutput(blurOutput) {
-            blurOutput.alwaysDiscardsLateVideoFrames = true
-            blurOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-            blurOutput.setSampleBufferDelegate(self, queue: blurQueue)
-            session.addOutput(blurOutput)
-        }
         session.commitConfiguration()
         guard ok else { return }   // 실패하면 다음에 다시 시도
         camConfigured = true
@@ -326,10 +330,6 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             layer.videoGravity = .resizeAspectFill
             self.view.layer.insertSublayer(layer, at: 0)
             self.previewLayer = layer
-            self.blurLayer.contentsGravity = .resizeAspectFill
-            self.blurLayer.backgroundColor = UIColor.black.cgColor
-            self.blurLayer.isHidden = true
-            self.view.layer.insertSublayer(self.blurLayer, at: 0)   // 미리보기보다 뒤
             self.applyPreviewFrame()
         }
     }
@@ -467,8 +467,6 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         cameraOnScreen = false
         setShutterButtons(false)
         previewLayer?.isHidden = true
-        blurLayer.isHidden = true
-        blurLayer.contents = nil
         camQueue.async {
             self.wantCamera = false
             if self.session.isRunning { self.session.stopRunning() }
@@ -480,31 +478,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         let orientation: AVCaptureVideoOrientation =
             view.window?.windowScene?.interfaceOrientation == .landscapeLeft ? .landscapeLeft : .landscapeRight
         previewLayer?.connection?.videoOrientation = orientation
-        camQueue.async {
-            self.photoOutput.connection(with: .video)?.videoOrientation = orientation
-            self.blurOutput.connection(with: .video)?.videoOrientation = orientation
-        }
-    }
-
-    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        guard blurWanted, let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        let now = CACurrentMediaTime()
-        guard now - lastBlurTime > 0.12 else { return }
-        lastBlurTime = now
-        let src = CIImage(cvPixelBuffer: pb)
-        let k = 160 / max(src.extent.width, 1)
-        let small = src.transformed(by: CGAffineTransform(scaleX: k, y: k))
-        let out = small.clampedToExtent()
-            .applyingGaussianBlur(sigma: 7)
-            .applyingFilter("CIColorControls", parameters: [kCIInputBrightnessKey: -0.12, kCIInputSaturationKey: 0.9])
-            .cropped(to: small.extent)
-        guard let cg = ciContext.createCGImage(out, from: small.extent) else { return }
-        DispatchQueue.main.async {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            self.blurLayer.contents = cg
-            CATransaction.commit()
-        }
+        camQueue.async { self.photoOutput.connection(with: .video)?.videoOrientation = orientation }
     }
 
     /// 폰을 실제로 든 방향(가로 왼쪽·오른쪽). 화면이 반대로 돌아가 있어도(회전 잠금 등) 사진은 바로 선 방향으로 찍히게 한다.
@@ -669,4 +643,70 @@ private final class WeakScriptHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         target?.userContentController(controller, didReceive: message)
     }
+}
+
+/// 키보드 위 막대: 바로가기 버튼(옆으로 밀기) + 오른쪽 끝 [완료]
+final class SnipBar: UIInputView {
+    var onPick: ((Int) -> Void)?
+    var onDone: (() -> Void)?
+    private let scroll = UIScrollView()
+    private let stack = UIStackView()
+
+    init() {
+        super.init(frame: CGRect(x: 0, y: 0, width: 320, height: 46), inputViewStyle: .keyboard)
+        autoresizingMask = .flexibleWidth
+        allowsSelfSizing = true
+        let done = UIButton(type: .system)
+        done.setTitle("완료", for: .normal)
+        done.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        done.addTarget(self, action: #selector(doneTap), for: .touchUpInside)
+        scroll.showsHorizontalScrollIndicator = false
+        stack.axis = .horizontal
+        stack.spacing = 8
+        stack.alignment = .center
+        scroll.addSubview(stack)
+        for v in [scroll, stack, done] as [UIView] { v.translatesAutoresizingMaskIntoConstraints = false }
+        addSubview(scroll); addSubview(done)
+        NSLayoutConstraint.activate([
+            heightAnchor.constraint(equalToConstant: 46),
+            done.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -14),
+            done.centerYAnchor.constraint(equalTo: centerYAnchor),
+            scroll.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 8),
+            scroll.trailingAnchor.constraint(equalTo: done.leadingAnchor, constant: -10),
+            scroll.topAnchor.constraint(equalTo: topAnchor),
+            scroll.bottomAnchor.constraint(equalTo: bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor),
+            stack.centerYAnchor.constraint(equalTo: scroll.centerYAnchor),
+            stack.heightAnchor.constraint(equalToConstant: 34),
+        ])
+        setItems(["mm", "cm", "(H=cm)", "(T=cm)", "(B=cm)"])
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    func setItems(_ items: [String]) {
+        stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for (i, t) in items.enumerated() {
+            let b = UIButton(type: .system)
+            b.setTitle(t, for: .normal)
+            b.setTitleColor(.label, for: .normal)
+            b.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+            b.backgroundColor = UIColor.secondarySystemFill
+            b.layer.cornerRadius = 8
+            b.contentEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
+            b.tag = i
+            b.addTarget(self, action: #selector(pick(_:)), for: .touchUpInside)
+            b.heightAnchor.constraint(equalToConstant: 34).isActive = true
+            stack.addArrangedSubview(b)
+        }
+    }
+    @objc private func pick(_ b: UIButton) {
+        UIDevice.current.playInputClick()
+        onPick?(b.tag)
+    }
+    @objc private func doneTap() { onDone?() }
+}
+
+extension SnipBar: UIInputViewAudioFeedback {
+    var enableInputClicksWhenVisible: Bool { true }
 }
