@@ -209,8 +209,20 @@
   #cam{position:fixed;inset:0;background:var(--bg);display:none;z-index:20;
     grid-template-columns:var(--side-w) minmax(0,1fr) var(--dmg-w);
     grid-template-areas:"l f r";
-    padding:var(--st) var(--sr) var(--sb) var(--sl);}
+    padding:var(--st) max(0px, calc(var(--sr) + var(--edge, 0px))) var(--sb) max(0px, calc(var(--sl) + var(--edge, 0px)));}
   #cam.show{display:grid;}
+  /* 화면 설정 위쪽: 촬영 화면 축소 미리보기 (같은 CSS 변수를 써서 값을 바꾸는 대로 바뀐다) */
+  .cam-mock-wrap{flex:none;padding:8px calc(12px + var(--sr)) 8px calc(12px + var(--sl));border-bottom:1px solid var(--line);background:var(--bg);overflow:hidden;}
+  .cam-mock-box{position:relative;margin:0 auto;overflow:hidden;border-radius:10px;border:1px solid var(--line);}
+  .cam-mock{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);pointer-events:none;display:grid;
+    grid-template-columns:var(--side-w) minmax(0,1fr) var(--dmg-w);grid-template-areas:"l f r";
+    padding:0 max(0px, calc(var(--msl, 0px) + var(--edge, 0px)));}
+  .cam-mock .mock-frame{position:absolute;background:#000;border-radius:4px;overflow:hidden;}
+  .cam-mock .mock-frame .g{position:absolute;inset:0;display:none;
+    background:linear-gradient(to right, transparent 33%, rgba(255,255,255,.35) 33% 33.7%, transparent 33.7% 66.3%, rgba(255,255,255,.35) 66.3% 67%, transparent 67%),
+      linear-gradient(to bottom, transparent 33%, rgba(255,255,255,.35) 33% 33.7%, transparent 33.7% 66.3%, rgba(255,255,255,.35) 66.3% 67%, transparent 67%);}
+  html.grid-on .cam-mock .mock-frame .g{display:block;}
+  .cam-mock .notch{position:absolute;top:50%;width:26px;height:110px;margin-top:-55px;border-radius:13px;background:#000;opacity:.85;}
   html.live-cam, html.live-cam body{background:transparent;}
   html.live-cam #cam{background:transparent;}
   .rail{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--bg);padding:10px 8px;gap:var(--cam-gap);}
@@ -369,6 +381,16 @@
   .seg .slot.cur{border-color:var(--accent);background:var(--card-2);}
   .seg .slot.fresh{color:var(--muted);}
   .seg .slot:empty::before{content:'?';color:var(--accent-dim);}
+  /* 교각 받침 번호(-1 · -2): 양식 칸 왼쪽 2단 체크박스, 체크한 것만 붙는다 */
+  .seg-row{display:flex;gap:8px;align-items:stretch;margin-bottom:12px;}
+  .seg-row .seg{flex:1;min-width:0;margin-bottom:0;}
+  .subchk{flex:none;display:grid;grid-template-rows:1fr 1fr;gap:6px;}
+  .subchk button{display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:9px;border:1px solid var(--line);
+    background:var(--card);color:var(--text);font-size:16px;font-weight:800;}
+  .subchk button i{width:16px;height:16px;border-radius:4px;border:2px solid var(--muted);font-style:normal;font-size:12px;line-height:12px;text-align:center;}
+  .subchk button.on{border-color:var(--accent);background:var(--card-2);}
+  .subchk button.on i{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  .subchk button.on i::before{content:'✓';}
   .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
   .keypad button{padding:0;height:54px;border-radius:11px;border:1px solid var(--line);background:var(--card-2);
     color:var(--text);font-size:20px;font-weight:700;}
@@ -558,6 +580,7 @@
 <!-- ============ 화면 설정 ============ -->
 <div class="screen" id="scrUi">
   <div class="scr-head"><button class="back-btn" data-back>‹</button><h2>화면 설정</h2></div>
+  <div class="cam-mock-wrap"><div class="cam-mock-box" id="uiMockBox"><div class="cam-mock" id="uiMock"></div></div></div>
   <div class="scr-body two">
     <div class="hintline full">값을 바꾸면 바로 적용되고 이 기기에 저장됩니다.</div>
     <div class="col">
@@ -835,7 +858,7 @@
     '바닥판':['S?'], '교면포장':['S?'], '포장':['S?'], '난간 및 연석':['S?'], '난간':['S?'], '연석':['S?'],
     '거더':['S?-G?'], '가로보':['S?-G?,?-CB?'], '세로보':['S?-G?,?-ST?'],
     '교대':['A?'], '교각':['P?'], '기초':['A?','P?'],
-    '교량받침':['A?-Sh?','P?-Sh?-1','P?-Sh?-2'], '받침':['A?-Sh?','P?-Sh?'],
+    '교량받침':['A?-Sh?','P?-Sh?'], '받침':['A?-Sh?','P?-Sh?'],
     '신축이음':['A?','P?'], '배수시설':['S?']
   };
 
@@ -872,7 +895,7 @@
           T('교대',['상태양호','균열','누수','백태','부식','침하','세굴'],['A?']),
           T('교각',['상태양호','균열','박리','박락','누수','백태','철근노출','세굴'],['P?']),
           T('기초',['상태양호','세굴','침하','균열','노출'],['A?','P?']),
-          T('교량받침',['상태양호','본체 부식','이동량 과다','고무 손상','앵커볼트 이완','특허 적용 사진//(받침변위측정장치)'],['A?-Sh?','P?-Sh?-1','P?-Sh?-2']),
+          T('교량받침',['상태양호','본체 부식','이동량 과다','고무 손상','앵커볼트 이완','특허 적용 사진//(받침변위측정장치)'],['A?-Sh?','P?-Sh?']),
           T('신축이음',['상태양호','후타재 박리','유간 이상','본체 부식','누수','특허 적용 사진//(유간측정장치)'],['A?','P?']),
           T('난간 및 연석',['상태양호','부식','난간 지주 볼트 탈락','도장박리','변형','연석 표면열화','파손'],['S?']),
           T('배수시설',['상태양호','배수구 막힘','파손','토사퇴적','방수재 박리 및 들뜸'],['S?'])
@@ -934,6 +957,12 @@
         if(!m.forms) m.forms = (FORM_MAP[m.name] || []).slice();
         if(!m.locMode) m.locMode = m.forms.length ? 'form' : 'free';
         if(!m.recent) m.recent = [];
+        // 10.20: P?-Sh?-1 · P?-Sh?-2 양식은 P?-Sh? 하나로 (-1·-2는 체크박스로 고른다)
+        var j = m.forms.indexOf('P?-Sh?-1'); if(j < 0) j = m.forms.indexOf('P?-Sh?-2');
+        if(j >= 0){
+          if(m.forms.indexOf('P?-Sh?') < 0) m.forms.splice(j, 0, 'P?-Sh?');
+          m.forms = m.forms.filter(function(f){ return f !== 'P?-Sh?-1' && f !== 'P?-Sh?-2'; });
+        }
       });
     });
     return t;
@@ -1894,7 +1923,11 @@
       var b = document.createElement('button');
       b.className = 'dmg-btn' + (values.note === n ? ' active' : '');
       b.textContent = splitLines(n).join('\n');
-      b.addEventListener('click', function(){ values.note = n; saveValues(); renderCam(); });
+      b.addEventListener('click', function(){
+        if(b.longFired){ b.longFired = false; return; }   // 길게 눌러 수정 창을 띄운 뒤의 손 떼기는 무시
+        values.note = n; saveValues(); renderCam();
+      });
+      onLongPress(b, 1000, function(){ editNoteName(h, n); });
       box.appendChild(b);
     });
     var more = document.createElement('button');
@@ -1904,9 +1937,37 @@
     box.appendChild(more);
   }
 
+  // 1초 넘게 누르고 있으면 fn (손가락이 움직이면 = 목록 스크롤이면 취소)
+  function onLongPress(el, ms, fn){
+    var t = null, x0 = 0, y0 = 0;
+    function stop(){ if(t){ clearTimeout(t); t = null; } }
+    el.addEventListener('pointerdown', function(e){
+      stop(); el.longFired = false; x0 = e.clientX; y0 = e.clientY;
+      t = setTimeout(function(){ t = null; el.longFired = true; if(navigator.vibrate) navigator.vibrate(15); fn(); }, ms);
+    });
+    el.addEventListener('pointermove', function(e){ if(Math.abs(e.clientX - x0) > 10 || Math.abs(e.clientY - y0) > 10) stop(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function(k){ el.addEventListener(k, stop); });
+    el.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  }
+  // 촬영 화면 손상명 길게 누르기: 이름 수정 (지금 보드판에 들어간 손상이면 보드판도 같이)
+  function editNoteName(h, old){
+    editText(old, function(v){
+      v = v.trim();
+      if(!v || v === old) return;
+      var i = h.arr.indexOf(old);
+      if(i < 0) return;
+      var dup = h.arr.indexOf(v);
+      if(dup >= 0 && dup !== i){ showToast('이미 있는 손상명입니다'); return; }
+      h.arr[i] = v;
+      if(values.note === old){ values.note = v; saveValues(); }
+      saveTree(); renderCam();
+    }, { title: '손상명 수정 (' + oneLine(h.name) + ')' });
+  }
+
   // 부재·손상 버튼: 글자가 버튼 폭을 넘으면 넘지 않을 때까지 글씨를 줄인다 (기본 크기의 55%까지)
-  function fitBtnsNow(){
-    document.querySelectorAll('#sidebar .comp-btn, #bottomBar .dmg-btn').forEach(function(b){
+  function fitBtnsNow(){ fitBtnsIn(document.querySelector('#cam')); }
+  function fitBtnsIn(root){
+    root.querySelectorAll('.rail-list .comp-btn, .rail-list .dmg-btn').forEach(function(b){
       b.style.fontSize = b.style.lineHeight = '';
       if(!b.clientWidth || b.scrollWidth <= b.clientWidth) return;
       var base = parseFloat(getComputedStyle(b).fontSize), f = base;
@@ -2047,10 +2108,19 @@
     }, { title: '신규 손상 (' + oneLine(noteHolder().name) + ')', ok: '적용', hint: '입력하면 손상 목록 맨 위에 추가되고 바로 보드판에 들어갑니다. 엔터는 줄바꿈입니다.' });
   });
 
+  // 양식 → 정규식. 교각 받침(P?-Sh?)은 끝에 -1 · -2가 붙어도 같은 양식
+  function hasSubNo(pattern){ return pattern === 'P?-Sh?'; }
+  function formRe(pattern){
+    var parts = pattern.split('?');
+    return new RegExp('^' + parts.map(function(p){ return p.replace(/[.*+^${}()|[\]\\]/g, '\\$&'); }).join('(\\d+)') +
+      (hasSubNo(pattern) ? '(?:-([12]))?' : '') + '$');
+  }
   function openLocSheet(){
     var m = curMember();
     $('lsTitle').textContent = (m ? m.name : '') + ' 위치 입력';
+    // 지금 위치에 맞는 양식을 먼저 연다 (예: P3-Sh1-2 → P?-Sh?)
     locFormIdx = 0;
+    if(m && values.loc) m.forms.some(function(f, i){ if(formRe(f).test(values.loc)){ locFormIdx = i; return true; } });
     renderLocSheet();
     $('locSheet').classList.add('show');
   }
@@ -2134,13 +2204,31 @@
     var vals = [], fresh = [], cur = 0;
 
     // 지난 위치가 이 양식과 맞으면 숫자를 가져온다
-    var re = new RegExp('^' + parts.map(function(p){ return p.replace(/[.*+^${}()|[\]\\]/g, '\\$&'); }).join('(\\d+)') + '$');
+    var re = formRe(pattern);
     var prevLoc = (values.loc && re.exec(values.loc)) || ((m.recent || []).map(function(r){ return re.exec(r); }).filter(Boolean)[0]);
     for(var i = 0; i < n; i++){ vals.push(prevLoc ? prevLoc[i + 1] : ''); fresh.push(!!prevLoc); }
     cur = prevLoc ? n - 1 : 0;   // 보통 마지막 번호만 바뀐다
+    var sub = (hasSubNo(pattern) && prevLoc && prevLoc[n + 1]) || '';   // '' · '1' · '2'
 
     var seg = document.createElement('div');
     seg.className = 'seg';
+    var segHost = wrap;
+    if(hasSubNo(pattern)){
+      var segRow = document.createElement('div');
+      segRow.className = 'seg-row';
+      var chk = document.createElement('div');
+      chk.className = 'subchk';
+      ['1', '2'].forEach(function(k){
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.innerHTML = '<i></i>-' + k;
+        b.addEventListener('click', function(){ sub = (sub === k) ? '' : k; draw(); });
+        chk.appendChild(b);
+      });
+      segRow.appendChild(chk);
+      wrap.appendChild(segRow);
+      segHost = segRow;
+    }
     var slots = [];
     parts.forEach(function(p, i){
       if(p){ var t = document.createElement('span'); t.className = 'txt'; t.textContent = p; seg.appendChild(t); }
@@ -2151,7 +2239,7 @@
         seg.appendChild(sl); slots.push(sl);
       }
     });
-    wrap.appendChild(seg);
+    segHost.appendChild(seg);
 
     var prev = document.createElement('div');
     prev.className = 'locprev';
@@ -2174,7 +2262,7 @@
     function build(){
       var out = '';
       parts.forEach(function(p, i){ out += p; if(i < n) out += (vals[i] || '_'); });
-      return out;
+      return out + (sub ? '-' + sub : '');
     }
     function done(){
       if(vals.some(function(v){ return !v; })){ showToast('숫자를 모두 입력하세요'); cur = vals.indexOf(''); draw(); return; }
@@ -2196,6 +2284,7 @@
         sl.classList.toggle('cur', i === cur);
         sl.classList.toggle('fresh', fresh[i] && !!vals[i]);
       });
+      if(chk) Array.prototype.forEach.call(chk.children, function(b, i){ b.classList.toggle('on', sub === String(i + 1)); });
       prev.innerHTML = '입력 결과 &nbsp; <b>' + build() + '</b>';
       pad.nextBtn.textContent = cur < n - 1 ? '다음 ›' : '확인';
       fitSeg();
@@ -3368,6 +3457,7 @@
     ['cam', 'shutter',  '촬영 버튼 크기',    56, 100, 2,   'px', 76],
     ['cam', 'cam-gap',  '버튼 간격',          2,  14, 1,   'px', 6],
     ['cam', 'r-btn',    '버튼 둥글기',        0,  20, 1,   'px', 9],
+    ['cam', 'edge',     '좌우 끝 여백',     -40,  60, 1,   'px', 0],   // 0 = 노치 피하는 기본 여백, − 는 더 가장자리로
     ['gen', 'zoom',     '글씨·화면 크기',   0.8, 1.4, 0.05, '%', 1]
   ];
   var UI_COLORS = [['accent', '강조색'], ['bg', '배경'], ['card', '카드'], ['text', '글자']];
@@ -3399,6 +3489,56 @@
     document.documentElement.classList.toggle('grid-on', ui.grid !== false);
     layoutFrame();
     if(typeof fitBtns === 'function') fitBtns();
+    if($('scrUi').classList.contains('show')) layoutUiMock();
+  }
+
+  /* 화면 설정 미리보기: 가로 촬영 화면을 같은 클래스로 축소해 그린다.
+     설정 화면은 세로라 가로일 때의 노치 여백은 세로 위쪽 여백으로 짐작한다 (노치 없는 폰은 0) */
+  function esc(t){ return String(t).replace(/[&<>"]/g, function(ch){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[ch]; }); }
+  function safeTopPx(){
+    var d = document.createElement('div');
+    d.style.cssText = 'position:absolute;visibility:hidden;height:env(safe-area-inset-top, 0px)';
+    document.body.appendChild(d);
+    var v = d.offsetHeight; d.remove(); return v;
+  }
+  function renderUiMock(){
+    var mk = $('uiMock'), c = curCat(), h = noteHolder();
+    function btns(list, cls, act){
+      return list.slice(0, 14).map(function(n){
+        return '<div class="' + cls + (n === act ? ' active' : '') + '">' + esc(splitLines(n).join('\n')) + '</div>';
+      }).join('');
+    }
+    mk.innerHTML =
+      '<div class="notch" style="left:0"></div>' +
+      '<aside class="rail rail-l"><div class="cam-head"><div class="loc-btn cam-title"><small>시설명</small><b>' + esc(values.site || '-') + '</b></div></div>' +
+      '<div class="rail-t">부재명</div><div class="rail-list">' + btns((c ? c.members : []).map(function(m){ return m.name; }), 'comp-btn', values.member) + '</div>' +
+      '<div class="cam-back">‹ 홈</div></aside>' +
+      '<div class="frame-cell"><div class="mock-frame"><div class="g"></div></div></div>' +
+      '<aside class="rail rail-r"><div class="loc-pair"><div class="loc-btn new-dmg"><small>신규</small><span>＋</span></div>' +
+      '<div class="loc-btn" id="uiMockLoc"><small>위치</small><span>' + esc(values.loc || '-') + '</span></div></div>' +
+      '<div class="rail-t">손상명</div><div class="rail-list">' + btns(h.arr, 'dmg-btn', values.note) + '</div>' +
+      '<div class="shot-box"><div class="capture-btn"><span class="dot"></span></div></div></aside>';
+    layoutUiMock();
+  }
+  function layoutUiMock(){
+    var box = $('uiMockBox'), mk = $('uiMock');
+    if(!mk.firstChild) return;
+    var sw = Math.max(screen.width, screen.height), sh = Math.min(screen.width, screen.height);
+    var st = safeTopPx();
+    mk.style.setProperty('--msl', (st > 30 ? st : 0) + 'px');
+    mk.style.width = sw + 'px'; mk.style.height = sh + 'px';
+    var availW = box.parentNode.clientWidth - 24, availH = Math.round(window.innerHeight * 0.32);
+    var k = Math.min(availW / sw, availH / sh);
+    box.style.width = Math.round(sw * k) + 'px'; box.style.height = Math.round(sh * k) + 'px';
+    mk.style.transform = 'scale(' + k + ')';
+    var notch = mk.querySelector('.notch'); notch.style.display = st > 30 ? '' : 'none'; notch.style.left = '4px';
+    // 가운데 칸에 4:3 뷰파인더 (실제 촬영 화면 layoutFrame과 같은 계산)
+    var cell = mk.querySelector('.frame-cell'), f = mk.querySelector('.mock-frame'), pad = 6;
+    var cw = cell.clientWidth - pad * 2, ch = cell.clientHeight - pad * 2;
+    var fw = Math.min(cw, ch * 4 / 3), fh = fw * 3 / 4;
+    f.style.left = Math.round(pad + (cw - fw) / 2) + 'px'; f.style.top = Math.round(pad + (ch - fh) / 2) + 'px';
+    f.style.width = Math.round(fw) + 'px'; f.style.height = Math.round(fh) + 'px';
+    if(typeof fitBtnsIn === 'function') fitBtnsIn(mk);
   }
 
   function renderUiScreen(){
@@ -3470,7 +3610,8 @@
       cbox.appendChild(d);
     });
   }
-  $('navUi').addEventListener('click', function(){ renderUiScreen(); showScreen('scrUi'); });
+  $('navUi').addEventListener('click', function(){ renderUiScreen(); showScreen('scrUi'); renderUiMock(); });
+  window.addEventListener('resize', function(){ if($('scrUi').classList.contains('show')) layoutUiMock(); });
 
   /* ================= 계정 · 데이터 백업 (Firebase) =================
      보드판 전용 Firebase 프로젝트: 이메일 로그인 + Firestore 문서 fieldboard/{로그인 uid}
