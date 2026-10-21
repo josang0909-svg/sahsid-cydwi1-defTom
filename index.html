@@ -1978,8 +1978,8 @@
       b.className = 'comp-btn' + (values.member === m.name ? ' active' : '');
       b.textContent = splitLines(m.name).join('\n');
       b.addEventListener('click', function(){
-        // 위치는 이 부재에서 마지막으로 썼던 값 (없으면 빈칸)
-        if(values.member !== m.name) values.loc = (m.recent && m.recent[0]) || '';
+        // 전경만 위치를 비운다. 다른 부재는 그 부재에서 마지막으로 썼던 위치, 없으면 지금 위치를 그대로 둔다
+        if(values.member !== m.name) values.loc = m.name === '전경' ? '' : ((m.recent && m.recent[0]) || values.loc || '');
         values.member = m.name; values.note = '';
         saveValues(); renderCam();
       });
