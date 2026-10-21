@@ -49,6 +49,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
 
     /// 키보드 위 막대(원래 ^ ∨ 완료 자리)에 띄우는 입력 바로가기 버튼. 목록은 웹페이지 설정에서 받는다.
     private let snipBar = SnipBar()
+    private let numPad = NumPad()
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
@@ -99,6 +100,12 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             self?.webView.evaluateJavaScript("window.__snip && window.__snip(\(i))")
         }
         snipBar.onDone = { [weak self] in self?.webView.endEditing(true) }
+        numPad.onKey = { [weak self] t in (self?.contentView as? UIKeyInput)?.insertText(t) }
+        numPad.onDelete = { [weak self] in (self?.contentView as? UIKeyInput)?.deleteBackward() }
+        numPad.onLetters = { [weak self] in
+            Self.wantNumbers = false
+            self?.contentView?.reloadInputViews()
+        }
         installSnipBar()
 
         setupShutterButtons()
@@ -111,11 +118,13 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     /// 웹뷰 입력칸의 키보드 위 막대를 바로가기 막대로 바꾼다 (손상명 입력칸일 때만, 나머지는 원래 ^ ∨ 완료 막대).
     /// 웹뷰 안쪽 입력 담당 뷰(WKContentView)를 하위 클래스로 바꿔 끼워 막대와 키보드 종류를 정한다 (iOS 공개 API로는 바꿀 수 없음)
     private static var snipBarRef: UIView?
+    private static var numPadRef: UIView?
     private static var snipOn = false        // 지금 입력칸이 손상명이면 true (웹페이지가 알려 줌)
     private static var wantNumbers = false   // 바로가기를 누른 뒤 숫자 자판(123)으로
     private weak var contentView: UIView?
     private func installSnipBar() {
         Self.snipBarRef = snipBar
+        Self.numPadRef = numPad
         guard let content = webView.scrollView.subviews.first(where: { String(describing: type(of: $0)).hasPrefix("WKContent") }) else { return }
         contentView = content
         let base: AnyClass = type(of: content)
@@ -124,7 +133,6 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         var cls: AnyClass? = NSClassFromString(name)
         if cls == nil, let made = objc_allocateClassPair(base, name, 0) {
             typealias ObjGetter = @convention(c) (AnyObject, Selector) -> AnyObject?
-            typealias IntGetter = @convention(c) (AnyObject, Selector) -> Int
             // 키보드 위 막대: 손상명일 때만 바로가기, 아니면 원래 막대
             let accSel = #selector(getter: UIResponder.inputAccessoryView)
             let accOrig = class_getInstanceMethod(base, accSel).map { unsafeBitCast(method_getImplementation($0), to: ObjGetter.self) }
@@ -133,28 +141,15 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 return accOrig?(me, accSel)
             }
             class_addMethod(made, accSel, imp_implementationWithBlock(acc), "@@:")
-            // 키보드 종류: 바로가기를 누른 뒤에는 숫자·기호 자판 (한글 자판의 123 화면, ㄱㄴㄷ 키로 돌아감)
-            let numType = UIKeyboardType.numbersAndPunctuation.rawValue
-            let trSel = NSSelectorFromString("textInputTraits")
-            if let m = class_getInstanceMethod(base, trSel) {
-                let orig = unsafeBitCast(method_getImplementation(m), to: ObjGetter.self)
-                let tr: @convention(block) (AnyObject) -> AnyObject? = { me in
-                    let t = orig(me, trSel)
-                    if BoardViewController.wantNumbers, let o = t as? NSObject, o.responds(to: NSSelectorFromString("setKeyboardType:")) {
-                        o.setValue(numType, forKey: "keyboardType")
-                    }
-                    return t
-                }
-                class_addMethod(made, trSel, imp_implementationWithBlock(tr), "@@:")
+            // 바로가기를 누른 뒤에는 키보드 대신 앱 숫자 키패드 (ㄱㄴㄷ 키로 원래 키보드로)
+            // 웹뷰는 키보드 종류를 중간에 바꿔도 다시 읽지 않아서, 키보드 자체(inputView)를 바꿔 끼운다
+            let inSel = #selector(getter: UIResponder.inputView)
+            let inOrig = class_getInstanceMethod(base, inSel).map { unsafeBitCast(method_getImplementation($0), to: ObjGetter.self) }
+            let inp: @convention(block) (AnyObject) -> AnyObject? = { me in
+                if BoardViewController.wantNumbers { return BoardViewController.numPadRef }
+                return inOrig?(me, inSel)
             }
-            let kbSel = NSSelectorFromString("keyboardType")
-            if let m = class_getInstanceMethod(base, kbSel) {
-                let orig = unsafeBitCast(method_getImplementation(m), to: IntGetter.self)
-                let kb: @convention(block) (AnyObject) -> Int = { me in
-                    BoardViewController.wantNumbers ? numType : orig(me, kbSel)
-                }
-                class_addMethod(made, kbSel, imp_implementationWithBlock(kb), "q@:")
-            }
+            class_addMethod(made, inSel, imp_implementationWithBlock(inp), "@@:")
             objc_registerClassPair(made)
             cls = made
         }
@@ -162,13 +157,15 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     }
 
     private func setSnipOn(_ on: Bool) {
+        let wasNumbers = Self.wantNumbers
         Self.wantNumbers = false
-        guard on != Self.snipOn else { return }
+        guard on != Self.snipOn || wasNumbers else { return }
         Self.snipOn = on
         contentView?.reloadInputViews()
     }
 
     private func keyboardToNumbers() {
+        guard !Self.wantNumbers else { return }
         Self.wantNumbers = true
         contentView?.reloadInputViews()
     }
@@ -759,4 +756,93 @@ final class SnipBar: UIInputView {
 
 extension SnipBar: UIInputViewAudioFeedback {
     var enableInputClicksWhenVisible: Bool { true }
+}
+
+/// 바로가기를 누른 뒤 뜨는 숫자 키패드 (한글 키보드의 123 화면처럼). ㄱㄴㄷ 키로 원래 키보드로 돌아간다.
+final class NumPad: UIInputView, UIInputViewAudioFeedback {
+    var onKey: ((String) -> Void)?
+    var onDelete: (() -> Void)?
+    var onLetters: (() -> Void)?
+    var enableInputClicksWhenVisible: Bool { true }
+    private var repeatTimer: Timer?
+
+    init() {
+        super.init(frame: CGRect(x: 0, y: 0, width: 320, height: 180), inputViewStyle: .keyboard)
+        autoresizingMask = .flexibleWidth
+        allowsSelfSizing = true
+        let rows: [[String]] = [
+            ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+            [".", ",", "-", "×", "/", "(", ")", "=", "~", "@"],
+            ["ㄱㄴㄷ", "space", "⌫"],
+        ]
+        let col = UIStackView()
+        col.axis = .vertical; col.spacing = 9; col.distribution = .fillEqually
+        col.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(col)
+        NSLayoutConstraint.activate([
+            heightAnchor.constraint(equalToConstant: 180),
+            col.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 4),
+            col.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -4),
+            col.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            col.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -6),
+        ])
+        for r in rows {
+            let row = UIStackView()
+            row.axis = .horizontal; row.spacing = 6
+            row.distribution = r.count == 3 ? .fill : .fillEqually
+            var spaceKey: UIButton?, sideKeys: [UIButton] = []
+            for k in r {
+                let b = UIButton(type: .custom)
+                b.layer.cornerRadius = 6
+                b.titleLabel?.font = .systemFont(ofSize: k.count == 1 ? 23 : 16, weight: .regular)
+                b.setTitleColor(.label, for: .normal)
+                let fn = (k == "ㄱㄴㄷ" || k == "⌫")
+                b.backgroundColor = UIColor { $0.userInterfaceStyle == .dark
+                    ? UIColor(white: fn ? 0.27 : 0.42, alpha: 1) : (fn ? UIColor(white: 0.68, alpha: 1) : .white) }
+                b.layer.shadowColor = UIColor.black.cgColor
+                b.layer.shadowOpacity = 0.3; b.layer.shadowRadius = 0; b.layer.shadowOffset = CGSize(width: 0, height: 1)
+                switch k {
+                case "space":
+                    b.setTitle("스페이스", for: .normal)
+                    b.addTarget(self, action: #selector(space), for: .touchUpInside)
+                    spaceKey = b
+                case "⌫":
+                    b.setImage(UIImage(systemName: "delete.left"), for: .normal)
+                    b.tintColor = .label
+                    b.addTarget(self, action: #selector(delDown), for: .touchDown)
+                    b.addTarget(self, action: #selector(delUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+                    sideKeys.append(b)
+                case "ㄱㄴㄷ":
+                    b.setTitle(k, for: .normal)
+                    b.addTarget(self, action: #selector(letters), for: .touchUpInside)
+                    sideKeys.append(b)
+                default:
+                    b.setTitle(k, for: .normal)
+                    b.addTarget(self, action: #selector(key(_:)), for: .touchUpInside)
+                }
+                row.addArrangedSubview(b)
+            }
+            if let sp = spaceKey {
+                for s in sideKeys { s.widthAnchor.constraint(equalTo: sp.widthAnchor, multiplier: 0.3).isActive = true }
+            }
+            col.addArrangedSubview(row)
+        }
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    @objc private func key(_ b: UIButton) {
+        UIDevice.current.playInputClick()
+        if let t = b.title(for: .normal) { onKey?(t) }
+    }
+    @objc private func space() { UIDevice.current.playInputClick(); onKey?(" ") }
+    @objc private func letters() { UIDevice.current.playInputClick(); onLetters?() }
+    @objc private func delDown() {
+        UIDevice.current.playInputClick()
+        onDelete?()
+        repeatTimer?.invalidate()
+        repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: false) { [weak self] _ in
+            self?.repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { _ in self?.onDelete?() }
+        }
+    }
+    @objc private func delUp() { repeatTimer?.invalidate(); repeatTimer = nil }
 }

@@ -1108,7 +1108,7 @@
     var el = document.activeElement, sn = (settings.snips || [])[i];
     if(!sn || !el || !el.dataset || el.dataset.snips !== '1') return;
     insertSnip(el, sn);
-    // 바로 숫자를 칠 수 있게 키보드를 숫자 자판(123)으로
+    // 바로 숫자를 칠 수 있게 앱 숫자 키패드로 (ㄱㄴㄷ 키로 돌아감)
     window.webkit.messageHandlers.board.postMessage({ type:'kbNumbers' });
   };
   // 손상명 입력칸에 들어갈 때만 키보드 위 막대에 바로가기 버튼
