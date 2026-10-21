@@ -238,7 +238,7 @@
   .rail-t{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:var(--muted);padding:4px 2px 0;}
   .cam-head{flex:none;display:flex;align-items:center;gap:7px;min-width:0;}
   /* 뒤로(홈) 버튼은 시설명과 떨어뜨려 왼쪽 칸 맨 아래에 둔다 (시설명 누를 때 잘못 눌리지 않게) */
-  #cam.home-strip .cam-back{position:absolute;bottom:10px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  #cam.home-strip .cam-back{position:absolute;top:10px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
     border-color:var(--accent-dim);color:var(--text);background:var(--card);}
   #cam.home-strip .cam-back .cb-a{font-size:20px;line-height:1;}
   #cam.home-strip .cam-back .cb-t{font-size:11px;line-height:1.2;}
@@ -262,7 +262,7 @@
   .dmg-btn.other,.comp-btn.other{background:transparent;border-style:dashed;color:var(--accent);text-align:center;}
   .loc-btn{flex:none;display:flex;flex-direction:column;gap:1px;width:100%;padding:8px 10px;border-radius:var(--r-btn);
     border:1px solid var(--accent-dim);background:var(--card);color:var(--text);text-align:left;}
-  .loc-pair{flex:none;display:grid;grid-template-columns:48px minmax(0,1fr);gap:6px;}
+  .loc-pair{flex:none;display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:6px;}
   .loc-pair .loc-btn{min-width:0;padding:7px 8px;justify-content:center;}
   .loc-btn.new-dmg{align-items:center;text-align:center;padding:7px 2px;}
   .loc-btn.new-dmg small{letter-spacing:0;}
@@ -292,11 +292,12 @@
     border-radius:5px;background:#f2c94c;color:#000;font-size:12px;font-weight:800;pointer-events:none;}
   .focus-lock.show{display:block;}
   /* 플래시 */
-  .flash-btn{position:absolute;top:8px;right:8px;z-index:4;display:none;width:40px;height:40px;border-radius:50%;
-    border:none;padding:0;background:rgba(0,0,0,0.45);color:#fff;align-items:center;justify-content:center;}
-  .flash-btn.left{right:auto;left:8px;}
+  /* 기본 카메라 위쪽 단추처럼: 반투명 어두운 동그라미 + 번개 (켜면 노랑) */
+  .flash-btn{position:absolute;top:10px;right:10px;z-index:4;display:none;width:44px;height:44px;border-radius:50%;
+    border:none;padding:0;background:rgba(28,28,30,0.6);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;align-items:center;justify-content:center;}
+  .flash-btn.left{right:auto;left:10px;}
   #cam.live .flash-btn.on{display:flex;}
-  .flash-btn svg{width:20px;height:20px;}
+  .flash-btn svg{width:23px;height:23px;}
   .flash-btn.lit{color:#f2c94c;}
   .capture-btn{width:var(--shutter);height:var(--shutter);border-radius:50%;background:#fff;padding:0;
     border:5px solid var(--card-2);box-shadow:0 0 0 2px var(--line);display:flex;align-items:center;justify-content:center;}
@@ -324,24 +325,29 @@
       linear-gradient(to bottom, transparent calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% - 0.5px), rgba(255,255,255,0.35) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px)),
       linear-gradient(to bottom, transparent calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% - 0.5px), rgba(255,255,255,0.35) calc(66.667% + 0.5px), transparent calc(66.667% + 0.5px));}
   html.grid-on #camGrid{display:block;}
-  /* 줌: 오른쪽 가장자리 배율 버튼 + 위아래로 끌면 나오는 눈금 다이얼 (기본 카메라처럼) */
+  /* 줌: 기본 카메라처럼. 평소엔 배경 없는 배율 단추(.5 1× 2)만, 바꿀 때만 오른쪽에서 둥근 눈금 다이얼이 나온다 */
   #camFrame{touch-action:none;}
   #camVideo{transform-origin:50% 50%;}
-  .zoom-ctl{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:4;display:none;
-    flex-direction:column-reverse;align-items:center;gap:6px;padding:6px 4px;border-radius:24px;
-    background:rgba(0,0,0,0.38);touch-action:none;user-select:none;-webkit-user-select:none;}
+  .zoom-ctl{position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:4;display:none;
+    flex-direction:column-reverse;align-items:center;gap:10px;padding:4px 0;
+    touch-action:none;user-select:none;-webkit-user-select:none;transition:opacity .2s;}
   #cam.live .zoom-ctl.on{display:flex;}
-  .zoom-ctl button{width:36px;height:36px;border-radius:50%;border:none;padding:0;background:rgba(0,0,0,0.45);
-    color:#fff;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;}
-  .zoom-ctl button.on{width:40px;height:40px;color:#f2c94c;font-size:12.5px;background:rgba(0,0,0,0.6);}
-  #zoomRuler{position:absolute;right:58px;top:0;width:52px;border-radius:14px;background:rgba(0,0,0,0.45);overflow:hidden;z-index:4;pointer-events:none;
-    opacity:0;transition:opacity .25s;}
-  #zoomRuler.show{opacity:1;transition:none;}
-  #zoomRuler i{position:absolute;right:3px;width:7px;height:1px;margin-top:-0.5px;background:rgba(255,255,255,0.55);}
-  #zoomRuler i.mj{width:13px;height:2px;margin-top:-1px;background:#fff;}
-  #zoomRuler i.cur{width:22px;right:2px;height:2px;margin-top:-1px;background:#f2c94c;}
-  #zoomRuler b{position:absolute;right:20px;transform:translateY(-50%);font-size:12px;font-weight:700;color:#fff;line-height:1;
-    font-variant-numeric:tabular-nums;text-shadow:0 0 2px rgba(0,0,0,0.6);}
+  .zoom-ctl.dial{opacity:0;}
+  .zoom-ctl button{width:32px;height:32px;border-radius:50%;border:none;padding:0;background:rgba(28,28,30,0.35);
+    color:#fff;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-0.3px;text-shadow:0 0 3px rgba(0,0,0,0.5);}
+  .zoom-ctl button.on{width:42px;height:42px;color:#f2c94c;font-size:13px;background:rgba(28,28,30,0.6);text-shadow:none;}
+  #zoomRuler{position:absolute;border-radius:50%;z-index:4;pointer-events:none;opacity:0;transition:opacity .3s;
+    background:radial-gradient(circle, rgba(0,0,0,0.22) 0, rgba(0,0,0,0.42) 100%);}
+  #zoomRuler.show{opacity:1;transition:none;pointer-events:auto;touch-action:none;}
+  #zoomRuler .zi{position:absolute;left:0;height:0;}
+  #zoomRuler .zi i{position:absolute;left:0;top:0;width:8px;height:1px;margin-top:-0.5px;background:rgba(255,255,255,0.5);}
+  #zoomRuler .zi.mj i{width:16px;height:2px;margin-top:-1px;background:#fff;}
+  #zoomRuler .zi b{position:absolute;left:24px;top:0;transform:translateY(-50%);white-space:nowrap;font-size:14px;font-weight:600;color:#fff;
+    line-height:1;font-variant-numeric:tabular-nums;}
+  #zoomRuler .zi b small,#zoomRuler .zcur small{font-size:9.5px;font-weight:500;letter-spacing:.06em;margin-left:6px;opacity:.75;}
+  #zoomRuler .zcur{position:absolute;left:0;height:0;}
+  #zoomRuler .zcur::before{content:'';position:absolute;left:1px;top:-5px;border:5px solid transparent;border-left:7px solid #f2c94c;border-right:0;}
+  #zoomRuler .zcur b{position:absolute;left:24px;top:0;transform:translateY(-50%);white-space:nowrap;font-size:14px;font-weight:700;color:#f2c94c;line-height:1;font-variant-numeric:tabular-nums;}
   #cam.flash #camFrame::after{content:'';position:absolute;inset:0;background:#fff;opacity:.6;z-index:5;pointer-events:none;}
 
   /* 세로로 들었을 때(웹): 뷰파인더 위, 레일 아래 */
@@ -816,8 +822,8 @@
 
   <aside class="rail rail-r">
     <div class="loc-pair">
-      <button class="loc-btn new-dmg" id="qNewNote" type="button"><small>신규</small><span>＋</span></button>
       <button class="loc-btn" id="qLoc"><small>위치</small><span>-</span></button>
+      <button class="loc-btn new-dmg" id="qNewNote" type="button"><small>신규</small><span>＋</span></button>
     </div>
     <div class="rail-t">손상명</div>
     <div class="rail-list" id="bottomBar"></div>
@@ -2076,7 +2082,7 @@
   /* 뷰파인더: 가운데 칸에 들어가는 가장 큰 4:3 사각형. 아이폰 앱에는 이 위치를 알려 카메라를 그 자리에 띄운다 */
   var frameRect = null, sentRect = '';
   // mode === 'check': 위치만 확인하고 바뀌었을 때만 보드판을 다시 그린다
-  // 노치가 있는 기기(가로 화면 옆에 빈 띠가 있는 경우)는 홈 버튼을 왼쪽 띠 아래 모서리로 빼고, 부재 목록을 한 칸 더 보이게
+  // 노치가 있는 기기(가로 화면 옆에 빈 띠가 있는 경우)는 홈 버튼을 왼쪽 띠 위 모서리로 빼고, 부재 목록을 한 칸 더 보이게
   function placeHome(){
     var cam = $('cam'), rail = cam.querySelector('.rail-l'), btn = $('camBack');
     var strip = rail.getBoundingClientRect().left - cam.getBoundingClientRect().left;
@@ -2643,32 +2649,42 @@
       }
       if(ruler.classList.contains('show')) drawRuler();
     }
+    // 기본 카메라 다이얼: 오른쪽 밖에 중심이 있는 큰 원의 가장자리가 보이고, 지금 배율이 노란 화살표 자리(왼쪽 끝)에 온다
+    var MM = 26; // 1× = 26mm (아이폰 광각 기준 환산 초점거리)
     function drawRuler(){
-      // 캔버스 그림은 아이폰 카메라 화면 위에서 흐리게 보여서, 눈금·숫자를 글자(DOM)로 만든다
-      var fh = $('camFrame').clientHeight || 300;
-      var h = Math.round(Math.min(260, Math.max(120, fh - 40)) / 2) * 2;
-      ruler.style.height = h + 'px';
-      ruler.style.top = Math.round((fh - h) / 2) + 'px';
-      var mid = h / 2, lz = Math.log(z) / Math.LN2, html = '';
-      for(var v = Math.ceil(min * 10) / 10; v <= max + 1e-6; v += (v < 2 ? 0.1 : v < 10 ? 0.5 : 1)){
-        v = Math.round(v * 10) / 10;
-        var y = Math.round(mid - (Math.log(v) / Math.LN2 - lz) * PX);
-        if(y < 6 || y > h - 6) continue;
-        var major = presets.some(function(p){ return Math.abs(p - v) < 0.01; }) || v === 5 || v === 10;
-        html += '<i class="' + (major ? 'mj' : '') + '" style="top:' + y + 'px"></i>';
-        if(major) html += '<b style="top:' + y + 'px">' + label(v) + '</b>';
+      var fr = $('camFrame'), fw = fr.clientWidth || 400, fh = fr.clientHeight || 300;
+      var R = Math.round(Math.max(200, fh * 0.8)), depth = Math.round(Math.min(140, fw * 0.3));
+      ruler.style.width = ruler.style.height = (2 * R) + 'px';
+      ruler.style.left = (fw - depth) + 'px';
+      ruler.style.top = Math.round(fh / 2 - R) + 'px';
+      var K = PX / R, lz = Math.log(z) / Math.LN2, html = '';
+      var lo = Math.log(min) / Math.LN2, hi = Math.log(max) / Math.LN2;
+      var majors = presets.concat([5, 10]).filter(function(p, i, a){ return p >= min - 0.01 && p <= max + 0.01 && a.indexOf(p) === i; });
+      function item(a, cls, inner){
+        return '<div class="zi' + cls + '" style="top:' + R + 'px;width:' + R + 'px;transform-origin:' + R + 'px 0;transform:rotate(' + (a * 180 / Math.PI).toFixed(2) + 'deg)">' + inner + '</div>';
       }
-      html += '<i class="cur" style="top:' + mid + 'px"></i>';
+      for(var t = Math.ceil(lo * 16) / 16; t <= hi + 1e-6; t += 1/16){
+        var a = (t - lz) * K;
+        if(Math.abs(a) < 1.4) html += item(a, '', '<i></i>');
+      }
+      majors.forEach(function(v){
+        var a = (Math.log(v) / Math.LN2 - lz) * K;
+        if(Math.abs(a) > 1.4) return;
+        var lab = Math.abs(a) * R > 30 ? '<b>' + label(v) + '<small>' + Math.round(MM * v) + 'MM</small></b>' : '';
+        html += item(a, ' mj', '<i></i>' + lab);
+      });
+      html += '<div class="zcur" style="top:' + R + 'px"><b>' + label(z, true) + '<small>' + Math.round(MM * z) + 'MM</small></b></div>';
       ruler.innerHTML = html;
     }
     function showRuler(){
       clearTimeout(hideT);
       ruler.classList.add('show');
+      ctl.classList.add('dial');
       drawRuler();
     }
     function hideRulerSoon(){
       clearTimeout(hideT);
-      hideT = setTimeout(function(){ ruler.classList.remove('show'); }, 1200);
+      hideT = setTimeout(function(){ ruler.classList.remove('show'); ctl.classList.remove('dial'); }, 1200);
     }
     function set(v){
       z = clamp(v);
@@ -2689,39 +2705,42 @@
       if(apply && Math.abs(z - 1) > 0.01 && 1 >= min - 0.01) set(1);
     });
     function reset(){
-      ctl.classList.remove('on'); ruler.classList.remove('show');
+      ctl.classList.remove('on', 'dial'); ruler.classList.remove('show');
       apply = null; z = 1; min = max = 1; presets = [];
     }
 
     // 배율 버튼: 누르면 그 배율, 위아래로 끌면 다이얼
+    // 다이얼이 떠 있는 동안은 다이얼을 직접 끌어도 된다
     var drag = null;
-    ctl.addEventListener('pointerdown', function(e){
+    function down(e){
       if(!apply) return;
       drag = { y: e.clientY, z: z, moved: false, btn: e.target.closest('button') };
-      try{ ctl.setPointerCapture(e.pointerId); }catch(_){}
-      e.preventDefault();
-    });
-    ctl.addEventListener('pointermove', function(e){
+      try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){}
+      e.preventDefault(); e.stopPropagation();
+    }
+    ctl.addEventListener('pointerdown', down);
+    ruler.addEventListener('pointerdown', down);
+    function move(e){
       if(!drag) return;
       var dy = e.clientY - drag.y; // 아래로 끌면 확대, 위로 끌면 축소 (기본 카메라와 같은 방향)
       if(!drag.moved && Math.abs(dy) < 6) return;
       drag.moved = true;
       showRuler();
       set(drag.z * Math.pow(2, dy / PX));
-    });
+    }
+    ctl.addEventListener('pointermove', move);
+    ruler.addEventListener('pointermove', move);
     function end(){
       if(!drag) return;
       if(!drag.moved && drag.btn){
         var p = parseFloat(drag.btn.dataset.z);
         // 이미 그 버튼 구간이면 정확히 그 배율로 되돌린다
         set(p);
-        showRuler();
       }
       drag = null;
       hideRulerSoon();
     }
-    ctl.addEventListener('pointerup', end);
-    ctl.addEventListener('pointercancel', end);
+    [ctl, ruler].forEach(function(el){ el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); });
 
     // 두 손가락 벌리기/오므리기
     var pinch = null, frame = $('camFrame');
@@ -2804,7 +2823,7 @@
     }
     window.__camFocusReset = function(){ if(!lockTag.classList.contains('show')) hide(); };
 
-    function isControl(t){ return t.closest && t.closest('button, .zoom-ctl'); }
+    function isControl(t){ return t.closest && t.closest('button, .zoom-ctl, #zoomRuler'); }
     frame.addEventListener('pointerdown', function(e){
       if(!e.isPrimary){ cancel(); return; }          // 두 번째 손가락 = 줌
       if(!backend || isControl(e.target)) return;
@@ -3602,8 +3621,8 @@
       '<div class="rail-t">부재명</div><div class="rail-list">' + btns((c ? c.members : []).map(function(m){ return m.name; }), 'comp-btn', values.member) + '</div>' +
       '<div class="cam-back">‹ 홈</div></aside>' +
       '<div class="frame-cell"><div class="mock-frame"><div class="g"></div></div></div>' +
-      '<aside class="rail rail-r"><div class="loc-pair"><div class="loc-btn new-dmg"><small>신규</small><span>＋</span></div>' +
-      '<div class="loc-btn" id="uiMockLoc"><small>위치</small><span>' + esc(values.loc || '-') + '</span></div></div>' +
+      '<aside class="rail rail-r"><div class="loc-pair"><div class="loc-btn" id="uiMockLoc"><small>위치</small><span>' + esc(values.loc || '-') + '</span></div>' +
+      '<div class="loc-btn new-dmg"><small>신규</small><span>＋</span></div></div>' +
       '<div class="rail-t">손상명</div><div class="rail-list">' + btns(h.arr, 'dmg-btn', values.note) + '</div>' +
       '<div class="shot-box"><div class="capture-btn"><span class="dot"></span></div></div></aside>';
     layoutUiMock();
