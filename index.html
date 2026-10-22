@@ -1043,7 +1043,8 @@
   function settleFresh(){
     var f = values.fresh, k = freshKey();
     if(!f || !f[k]) return;
-    noteHolder().arr.sort(function(a, b){ return a.localeCompare(b, 'ko', { numeric:true }); });
+    // 상태양호는 늘 맨 위, 나머지만 가나다순
+    noteHolder().arr.sort(function(a, b){ return (b === '상태양호') - (a === '상태양호') || a.localeCompare(b, 'ko', { numeric:true }); });
     delete f[k];
     saveTree();
   }
