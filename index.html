@@ -306,6 +306,36 @@
   #cam.live .flash-btn.on{display:flex;}
   .flash-btn svg{width:23px;height:23px;}
   .flash-btn.lit{color:#f2c94c;}
+  /* 손상 칸 [▦ 전체 보기] */
+  .dmg-btn.all-btn{display:flex;align-items:center;justify-content:center;gap:6px;border-style:dashed;border-color:var(--accent-dim);color:var(--accent);}
+  .dmg-btn.all-btn svg{width:15px;height:15px;flex:none;}
+  .dmg-btn.all-btn small{font-size:10.5px;color:var(--muted);font-weight:700;}
+  /* 전체 보기 판: 가운데 미리보기 칸을 덮는다 */
+  .all-notes{grid-area:f;position:relative;z-index:30;display:none;align-items:stretch;justify-content:center;}
+  .all-notes.show{display:flex;}
+  .an-panel{width:calc(var(--all-w, 1) * 100%);display:flex;flex-direction:column;gap:8px;padding:10px;
+    background:rgba(12,11,10,0.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+  .an-head{flex:none;display:flex;align-items:center;gap:8px;}
+  .an-head b{flex:1;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .an-head button{flex:none;padding:6px 10px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:12px;font-weight:700;}
+  .an-grid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(var(--all-cols, 4), minmax(0,1fr));
+    grid-auto-rows:var(--all-h, 48px);gap:6px;align-content:start;}
+  .an-card{min-width:0;border-radius:var(--r-btn);border:1px solid var(--line);background:var(--card);color:var(--text);font-weight:700;
+    font-size:var(--all-fs, 14px);line-height:1.2;padding:2px 4px;white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere;overflow:hidden;}
+  .an-card.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+  /* 계열로 묶어 보기: 손상 칸 바로 왼쪽에 뜨는 창 */
+  .fam-pop{position:absolute;inset:0;z-index:31;display:none;}
+  .fam-pop.show{display:block;}
+  .fam-box{position:absolute;top:8px;bottom:8px;right:calc(var(--dmg-w) + var(--sr, 0px) + 6px);display:flex;gap:6px;flex-direction:row-reverse;}
+  .fam-col{width:190px;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:10px;background:var(--card-2);
+    border:1px solid var(--accent-dim);box-shadow:0 6px 20px rgba(0,0,0,.55);min-height:0;}
+  .fam-sub{display:none;align-self:flex-start;}
+  .fam-sub.show{display:flex;}
+  .fam-t{flex:none;display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:800;color:var(--muted);}
+  .fam-t button{padding:3px 8px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:11px;font-weight:700;}
+  .fam-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+  .fam-pop .dmg-btn{flex:none;}
+  .fam-pop .dmg-btn.open{border-color:var(--accent);}
   .capture-btn{width:var(--shutter);height:var(--shutter);border-radius:50%;background:#fff;padding:0;
     border:5px solid var(--card-2);box-shadow:0 0 0 2px var(--line);display:flex;align-items:center;justify-content:center;}
   .capture-btn:active{transform:scale(0.93);}
@@ -617,6 +647,7 @@
     <div class="hintline full">값을 바꾸면 바로 적용되고 이 기기에만 저장됩니다 (클라우드 백업 안 함). 노치·홈 바 여백은 기기에 맞춰 자동으로 피합니다.</div>
     <div class="col">
       <div class="sec"><div class="t">촬영 화면</div><div class="card" id="uiCam"></div></div>
+      <div class="sec"><div class="t">손상명 전체 보기 판</div><div class="card" id="uiAll"></div></div>
     </div>
     <div class="col">
       <div class="sec"><div class="t">설정 화면</div><div class="card" id="uiGen"></div></div>
@@ -824,6 +855,21 @@
       <div class="focus-box" id="focusBox"><div class="sun"><i id="focusSun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></i></div></div>
       <div class="focus-lock" id="focusLock">AE/AF 잠금</div>
       <div class="frame-hint" id="frameHint">카메라를 켜는 중입니다<br>촬영 버튼을 누르면 기본 카메라로 찍을 수 있습니다</div>
+    </div>
+  </div>
+
+  <!-- 전체 보기 판 (손상명) -->
+  <div class="all-notes" id="allNotes">
+    <div class="an-panel">
+      <div class="an-head"><b id="anTitle">손상명</b><button type="button" id="anEdit">＋ 목록 편집</button><button type="button" id="anClose">닫기 ✕</button></div>
+      <div class="an-grid" id="anGrid"></div>
+    </div>
+  </div>
+  <!-- 계열로 묶어 보기 (상태양호 길게 누르기) -->
+  <div class="fam-pop" id="famPop">
+    <div class="fam-box">
+      <div class="fam-col"><div class="fam-t">계열<button type="button" id="famClose">닫기 ✕</button></div><div class="fam-list" id="famList"></div></div>
+      <div class="fam-col fam-sub" id="famSub"></div>
     </div>
   </div>
 
@@ -1044,16 +1090,14 @@
     arr.unshift(v);
     var f = values.fresh || (values.fresh = {}), k = freshKey();
     f[k] = (f[k] || []).filter(function(x){ return x !== v; }).concat([v]);
-    values.note = v;
-    saveTree(); saveValues();
+    saveTree(); pickNote(v);
   }
   function settleFresh(){
     var f = values.fresh, k = freshKey();
     if(!f || !f[k]) return;
     // 상태양호는 늘 맨 위, 나머지만 가나다순
     // 상태양호는 늘 맨 위, 그다음 알파벳(영문), 그다음 가나다
-    function grp(x){ return x === '상태양호' ? 0 : /^[A-Za-z]/.test(x) ? 1 : 2; }
-    noteHolder().arr.sort(function(a, b){ return grp(a) - grp(b) || a.localeCompare(b, 'ko', { numeric:true, sensitivity:'base' }); });
+    noteHolder().arr.sort(noteCmp);
     delete f[k];
     saveTree();
   }
@@ -2029,28 +2073,126 @@
   document.querySelector('#cam .cam-title').addEventListener('click', function(){ openListScreen('site'); });
 
   $('clrNote').addEventListener('click', function(){ values.note = ''; saveValues(); renderCam(); });
+  /* 오른쪽 손상 칸은 버튼 6개: [상태양호] [▦ 전체 보기] + 이 부재에서 최근 쓴 손상 4개(가나다순).
+     상태양호를 길게 누르면 계열별로 묶은 목록, 전체 보기는 미리보기 위에 모든 손상을 가나다순 카드로 */
+  var GOOD = '상태양호';
+  function noteGrp(x){ return x === GOOD ? 0 : /^[A-Za-z]/.test(x) ? 1 : 2; }
+  function noteCmp(a, b){ return noteGrp(a) - noteGrp(b) || a.localeCompare(b, 'ko', { numeric:true, sensitivity:'base' }); }
+  function sortedNotes(){ return noteHolder().arr.slice().sort(noteCmp); }
+  function recentNotes(){
+    var arr = noteHolder().arr, r = ((values.recentNotes || {})[freshKey()] || []).filter(function(n){ return n !== GOOD && arr.indexOf(n) >= 0; });
+    // 아직 4개를 못 채웠으면 목록 앞쪽(가나다순)으로 채운다
+    sortedNotes().forEach(function(n){ if(r.length < 4 && n !== GOOD && r.indexOf(n) < 0) r.push(n); });
+    return r.slice(0, 4).sort(noteCmp);
+  }
+  function pickNote(n){
+    values.note = n;
+    if(n && n !== GOOD){
+      var rn = values.recentNotes || (values.recentNotes = {}), k = freshKey();
+      rn[k] = [n].concat((rn[k] || []).filter(function(x){ return x !== n; })).slice(0, 4);
+    }
+    saveValues(); renderCam();
+  }
+  function dmgButton(n, longFn){
+    var b = document.createElement('button');
+    b.className = 'dmg-btn' + (values.note === n ? ' active' : '');
+    b.textContent = splitLines(n).join('\n');
+    b.addEventListener('click', function(){
+      if(b.longFired){ b.longFired = false; return; }   // 길게 누른 뒤의 손 떼기는 무시
+      pickNote(n);
+    });
+    onLongPress(b, 1000, longFn);
+    return b;
+  }
+  $('clrNote').addEventListener('click', function(){ values.note = ''; saveValues(); renderCam(); });
   function renderBottom(){
     var box = $('bottomBar');
     $('clrNote').classList.toggle('on', !!values.note);
     box.innerHTML = '';
     var h = noteHolder();
-    h.arr.forEach(function(n){
-      var b = document.createElement('button');
-      b.className = 'dmg-btn' + (values.note === n ? ' active' : '');
-      b.textContent = splitLines(n).join('\n');
-      b.addEventListener('click', function(){
-        if(b.longFired){ b.longFired = false; return; }   // 길게 눌러 수정 창을 띄운 뒤의 손 떼기는 무시
-        values.note = n; saveValues(); renderCam();
-      });
-      onLongPress(b, 1000, function(){ editNoteName(h, n); });
-      box.appendChild(b);
-    });
-    var more = document.createElement('button');
-    more.className = 'dmg-btn other';
-    more.textContent = '＋ 목록 편집';
-    more.addEventListener('click', openNoteSheet);
-    box.appendChild(more);
+    box.appendChild(dmgButton(GOOD, function(){ openFamilies(); }));
+    var all = document.createElement('button');
+    all.className = 'dmg-btn all-btn';
+    all.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg><span>전체 보기</span><small>' + h.arr.length + '</small>';
+    all.addEventListener('click', openAllNotes);
+    box.appendChild(all);
+    recentNotes().forEach(function(n){ box.appendChild(dmgButton(n, function(){ editNoteName(h, n); })); });
   }
+
+  /* 전체 보기 판: 미리보기 위에 모든 손상을 가나다순 카드로. 고르면 닫힌다. 카드를 길게 누르면 이름 수정.
+     열·행·카드 높이·글자·판 폭은 화면 설정 [전체 보기 판]에서 */
+  function openAllNotes(){
+    var ov = $('allNotes'), g = $('anGrid'), h = noteHolder();
+    $('anTitle').textContent = oneLine(h.name) + ' 손상명 ' + h.arr.length;
+    g.innerHTML = '';
+    sortedNotes().forEach(function(n){
+      var b = document.createElement('button');
+      b.className = 'an-card' + (values.note === n ? ' active' : '');
+      b.textContent = splitLines(n).join('\n');
+      b.addEventListener('click', function(){ if(b.longFired){ b.longFired = false; return; } closeAllNotes(); pickNote(n); });
+      onLongPress(b, 1000, function(){ editNoteName(h, n); closeAllNotes(); });
+      g.appendChild(b);
+    });
+    ov.classList.add('show');
+    var rows = Math.round(ui['all-rows'] || 0);
+    g.style.gridAutoRows = '';
+    if(rows > 0){
+      var gap = parseFloat(getComputedStyle(g).rowGap) || 6;
+      g.style.gridAutoRows = Math.max(24, Math.floor((g.clientHeight - gap * (rows - 1)) / rows)) + 'px';
+    }
+    g.scrollTop = 0;
+    // 카드에 안 들어가는 긴 이름은 글씨를 줄인다 (60%까지)
+    g.querySelectorAll('.an-card').forEach(function(c){
+      var f = parseFloat(getComputedStyle(c).fontSize), min = f * 0.6;
+      while(f > min && (c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1)){ f -= 0.5; c.style.fontSize = f + 'px'; }
+    });
+  }
+  function closeAllNotes(){ $('allNotes').classList.remove('show'); }
+  $('anClose').addEventListener('click', closeAllNotes);
+  $('anEdit').addEventListener('click', function(){ closeAllNotes(); openNoteSheet(); });
+  $('allNotes').addEventListener('click', function(e){ if(e.target === $('allNotes')) closeAllNotes(); });
+
+  /* 계열로 묶어 보기 (상태양호 길게 누르기): 괄호 앞 이름이 같은 손상을 한 줄로 묶고, 누르면 옆에 세부 항목.
+     하나뿐인 계열은 누르면 바로 고른다. 어느 항목이든 길게 누르면 이름 수정 */
+  function noteBase(n){ var i = n.indexOf('('); return (i > 0 ? n.slice(0, i) : n).trim(); }
+  var famOpen = '';
+  function openFamilies(){ famOpen = ''; drawFamilies(); $('famPop').classList.add('show'); }
+  function closeFamilies(){ $('famPop').classList.remove('show'); }
+  function drawFamilies(){
+    var h = noteHolder(), groups = {}, order = [];
+    sortedNotes().forEach(function(n){ var k = noteBase(n); if(!groups[k]){ groups[k] = []; order.push(k); } groups[k].push(n); });
+    var l = $('famList'), r = $('famSub');
+    l.innerHTML = ''; r.innerHTML = '';
+    order.forEach(function(k){
+      var list = groups[k], one = list.length === 1;
+      var b = document.createElement('button');
+      var on = one ? values.note === list[0] : list.indexOf(values.note) >= 0;
+      b.className = 'dmg-btn' + (on ? ' active' : '') + (famOpen === k ? ' open' : '');
+      b.textContent = one ? splitLines(list[0]).join('\n') : k + '  ▸ ' + list.length;
+      b.addEventListener('click', function(){
+        if(b.longFired){ b.longFired = false; return; }
+        if(one){ closeFamilies(); pickNote(list[0]); return; }
+        famOpen = famOpen === k ? '' : k; drawFamilies();
+      });
+      onLongPress(b, 1000, function(){ closeFamilies(); editNoteName(h, one ? list[0] : list[0]); });
+      l.appendChild(b);
+    });
+    r.classList.toggle('show', !!famOpen);
+    if(famOpen){
+      var t = document.createElement('div'); t.className = 'fam-t'; t.textContent = famOpen; r.appendChild(t);
+      groups[famOpen].forEach(function(n){
+        var b = document.createElement('button');
+        b.className = 'dmg-btn' + (values.note === n ? ' active' : '');
+        var rest = n.slice(famOpen.length).trim();
+        b.textContent = rest || n;
+        b.addEventListener('click', function(){ if(b.longFired){ b.longFired = false; return; } closeFamilies(); pickNote(n); });
+        onLongPress(b, 1000, function(){ closeFamilies(); editNoteName(h, n); });
+        r.appendChild(b);
+      });
+    }
+  }
+  $('famClose').addEventListener('click', closeFamilies);
+  $('famPop').addEventListener('click', function(e){ if(e.target === $('famPop')) closeFamilies(); });
 
   // 1초 넘게 누르고 있으면 fn (손가락이 움직이면 = 목록 스크롤이면 취소)
   function onLongPress(el, ms, fn){
@@ -2201,8 +2343,7 @@
     str: function(x){ return x; },
     isOn: function(x){ return x === values.note; },
     tap: function(x){
-      values.note = x; saveValues();
-      $('noteSheet').classList.remove('show'); refreshAll();
+      $('noteSheet').classList.remove('show'); pickNote(x); refreshAll();
     },
     rename: function(x, v, i){ noteHolder().arr[i] = v; if(values.note === x){ values.note = v; saveValues(); } },
     persist: saveTree
@@ -3092,7 +3233,7 @@
     if(!$('cam').classList.contains('show')) return;
     // 신규 손상 입력 중이면 리모컨 = [적용]
     if($('txtSheet').classList.contains('show') && $('txtSheet').dataset.hw === '1') return $('txtOk').click();
-    if(document.querySelector('.sheet.show') || screenStack.length) return;
+    if(document.querySelector('.sheet.show, .all-notes.show, .fam-pop.show') || screenStack.length) return;
     $('captureBtn').click();
   };
   document.addEventListener('keydown', function(e){
@@ -3601,6 +3742,11 @@
     ['cam', 'cam-gap',  '버튼 간격',          2,  14, 1,   'px', 6],
     ['cam', 'r-btn',    '버튼 둥글기',        0,  20, 1,   'px', 9],
     ['cam', 'edge',     '좌우 끝 여백',     -40,  60, 1,   'px', 0],   // 0 = 노치 피하는 기본 여백, − 는 더 가장자리로
+    ['all', 'all-cols', '열 수',              2,   6, 1,   'n', 4],
+    ['all', 'all-rows', '행 수 (0 = 카드 높이대로)', 0, 8, 1, 'n', 0],
+    ['all', 'all-h',    '카드 높이',          28,  90, 2,   'px', 48],
+    ['all', 'all-fs',   '카드 글자',          10,  22, 0.5, 'px', 14],
+    ['all', 'all-w',    '판 폭',             0.5,  1, 0.05, '%', 1],
     ['gen', 'zoom',     '글씨·화면 크기',   0.8, 1.4, 0.05, '%', 1]
   ];
   var UI_COLORS = [['accent', '강조색'], ['bg', '배경'], ['card', '카드'], ['text', '글자']];
@@ -3659,7 +3805,8 @@
       '<div class="frame-cell"><div class="mock-frame"><div class="g"></div></div></div>' +
       '<aside class="rail rail-r"><div class="loc-pair"><div class="loc-btn" id="uiMockLoc"><small>위치</small><span>' + esc(values.loc || '-') + '</span></div>' +
       '<div class="loc-btn new-dmg"><small>신규</small><span>＋</span></div></div>' +
-      '<div class="rail-t">손상명</div><div class="rail-list">' + btns(h.arr, 'dmg-btn', values.note) + '</div>' +
+      '<div class="rail-t">손상명</div><div class="rail-list">' + btns([GOOD], 'dmg-btn', values.note) +
+      '<div class="dmg-btn all-btn">▦ 전체 보기</div>' + btns(recentNotes(), 'dmg-btn', values.note) + '</div>' +
       '<div class="shot-box"><div class="capture-btn"><span class="dot"></span></div></div></aside>';
     layoutUiMock();
   }
@@ -3685,8 +3832,8 @@
   }
 
   function renderUiScreen(){
-    ['cam', 'gen'].forEach(function(g){
-      var box = $(g === 'cam' ? 'uiCam' : 'uiGen');
+    ['cam', 'all', 'gen'].forEach(function(g){
+      var box = $({ cam:'uiCam', all:'uiAll', gen:'uiGen' }[g]);
       box.innerHTML = '';
       if(g === 'cam'){
         var gr = document.createElement('div');
@@ -3707,8 +3854,8 @@
           + '<input class="tn-v" type="text" inputmode="decimal"><span class="tn-u"></span>';
         d.querySelector('.tn-l').textContent = row[2];
         var rg = d.querySelector('input[type=range]'), vv = d.querySelector('.tn-v'), bs = d.querySelectorAll('.tn-step');
-        var pct = row[6] !== 'px';   // 글씨·화면 크기는 %로 보여 주고 입력받는다
-        d.querySelector('.tn-u').textContent = pct ? '%' : 'px';
+        var pct = row[6] === '%';   // 글씨·화면 크기는 %로 보여 주고 입력받는다
+        d.querySelector('.tn-u').textContent = pct ? '%' : row[6] === 'n' ? '' : 'px';
         rg.min = row[3]; rg.max = row[4]; rg.step = row[5]; rg.value = cur;
         function show(v){ vv.value = pct ? Math.round(v * 100) : v; }
         show(cur);
