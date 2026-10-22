@@ -1152,6 +1152,7 @@
   }
   sendSnips();
   $('txtOk').addEventListener('click', function(){
+    $('txtIn').blur();
     $('txtSheet').classList.remove('show');
     var cb = txtCb; txtCb = null;
     if(cb) cb($('txtIn').value);
@@ -2199,7 +2200,7 @@
     if(!v) return;
     // 신규 손상과 같은 흐름: 맨 위에 넣고 바로 보드판에 적용한 뒤 촬영 화면으로
     addFreshNote(v);
-    $('nsNew').value = '';
+    $('nsNew').value = ''; $('nsNew').blur();   // 키보드도 내려서 바로 촬영 화면으로
     $('noteSheet').classList.remove('show'); refreshAll();
     showToast('"' + oneLine(v) + '" 적용');
   });

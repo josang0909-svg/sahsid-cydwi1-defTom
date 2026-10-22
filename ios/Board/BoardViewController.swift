@@ -112,7 +112,26 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
 
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBest
+        NotificationCenter.default.addObserver(self, selector: #selector(checkPageUpdate),
+                                               name: UIApplication.willEnterForegroundNotification, object: nil)
         loadPage()
+    }
+
+    /// 앱이 백그라운드에서 돌아올 때도 화면(웹페이지)을 새로 받아, 바뀌었으면 다시 불러온다.
+    /// (예전에는 앱을 완전히 껐다 켤 때만 받아서, 웹 업데이트가 한참 반영되지 않았다) 촬영 화면에 있으면 다음 번에.
+    @objc private func checkPageUpdate() {
+        let request = URLRequest(url: Self.remoteURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 6)
+        URLSession.shared.dataTask(with: request) { data, response, _ in
+            guard let data = data, (response as? HTTPURLResponse)?.statusCode == 200, data.count > 1000,
+                  data != (try? Data(contentsOf: self.pageURL)) else { return }
+            DispatchQueue.main.async {
+                self.webView.evaluateJavaScript("!!(document.getElementById('cam') && document.getElementById('cam').classList.contains('show'))") { r, _ in
+                    if (r as? Bool) == true { return }
+                    try? data.write(to: self.pageURL, options: .atomic)
+                    self.webView.loadFileURL(self.pageURL, allowingReadAccessTo: self.pageURL.deletingLastPathComponent())
+                }
+            }
+        }.resume()
     }
 
     /// 웹뷰 입력칸의 키보드 위 막대를 바로가기 막대로 바꾼다 (손상명 입력칸일 때만, 나머지는 원래 ^ ∨ 완료 막대).
