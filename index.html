@@ -1028,6 +1028,25 @@
     if(m) return { arr:m.notes, name:m.name };
     return { arr:(c ? c.common : []), name:(c ? c.name + ' 공통' : '') };
   }
+  /* 촬영 중 새로 넣은 손상은 일단 맨 위에 두고(values.fresh), 다른 부재로 넘어갈 때
+     그 부재 손상 목록 전체를 가나다(오름차순)로 정리한다. 새로 넣은 게 없는 부재는 순서를 건드리지 않는다 */
+  function freshKey(){ return (values.cat || '') + '|' + (values.member || ''); }
+  function addFreshNote(v){
+    var arr = noteHolder().arr, i = arr.indexOf(v);
+    if(i >= 0) arr.splice(i, 1);
+    arr.unshift(v);
+    var f = values.fresh || (values.fresh = {}), k = freshKey();
+    f[k] = (f[k] || []).filter(function(x){ return x !== v; }).concat([v]);
+    values.note = v;
+    saveTree(); saveValues();
+  }
+  function settleFresh(){
+    var f = values.fresh, k = freshKey();
+    if(!f || !f[k]) return;
+    noteHolder().arr.sort(function(a, b){ return a.localeCompare(b, 'ko', { numeric:true }); });
+    delete f[k];
+    saveTree();
+  }
 
   /* ================= 보드판 ================= */
   // 촬영 시각: 셔터를 누른 순간 (보드판 일자 칸과 사진 EXIF에 같이 들어간다). 촬영 전 미리보기는 지금 시각
@@ -1979,7 +1998,10 @@
       b.textContent = splitLines(m.name).join('\n');
       b.addEventListener('click', function(){
         // 전경만 위치를 비운다. 다른 부재는 그 부재에서 마지막으로 썼던 위치, 없으면 지금 위치를 그대로 둔다
-        if(values.member !== m.name) values.loc = m.name === '전경' ? '' : ((m.recent && m.recent[0]) || values.loc || '');
+        if(values.member !== m.name){
+          settleFresh();
+          values.loc = m.name === '전경' ? '' : ((m.recent && m.recent[0]) || values.loc || '');
+        }
         values.member = m.name; values.note = '';
         saveValues(); renderCam();
       });
@@ -2174,10 +2196,11 @@
   $('nsAdd').addEventListener('click', function(){
     var v = $('nsNew').value.trim();
     if(!v) return;
-    var arr = noteHolder().arr;
-    if(arr.indexOf(v) < 0) arr.unshift(v);   // 새 손상은 맨 위에
-    saveTree(); $('nsNew').value = '';
-    nsEditor.draw(); refreshAll();
+    // 신규 손상과 같은 흐름: 맨 위에 넣고 바로 보드판에 적용한 뒤 촬영 화면으로
+    addFreshNote(v);
+    $('nsNew').value = '';
+    $('noteSheet').classList.remove('show'); refreshAll();
+    showToast('"' + oneLine(v) + '" 적용');
   });
   function openNoteSheet(){
     $('nsNew').value = '';
@@ -2193,11 +2216,7 @@
   $('qNewNote').addEventListener('click', function(){
     editText('', function(v){
       v = v.trim(); if(!v) return;
-      var arr = noteHolder().arr, i = arr.indexOf(v);
-      if(i >= 0) arr.splice(i, 1);
-      arr.unshift(v);
-      values.note = v;
-      saveTree(); saveValues(); renderCam();
+      addFreshNote(v); renderCam();
       showToast('"' + oneLine(v) + '" 적용');
     }, { title: '신규 손상 (' + oneLine(noteHolder().name) + ')', ok: '적용', snips: true, hint: '입력하면 손상 목록 맨 위에 추가되고 바로 보드판에 들어갑니다. 엔터는 줄바꿈입니다.' });
   });
