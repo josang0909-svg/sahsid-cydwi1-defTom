@@ -236,6 +236,11 @@
   .rail-l{grid-area:l;}
   .rail-r{grid-area:r;}
   .rail-t{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:var(--muted);padding:4px 2px 0;}
+  /* 손상명 제목 오른쪽 [✕ 비우기]: 손상이 골라져 있을 때만 */
+  .rail-th{display:flex;align-items:center;justify-content:space-between;gap:4px;}
+  .clr-note{display:none;flex:none;margin:-4px 0 -3px;padding:3px 7px;border-radius:6px;border:1px solid var(--line);background:var(--card);
+    color:var(--text);font-size:11px;font-weight:700;letter-spacing:0;line-height:1.2;}
+  .clr-note.on{display:block;}
   .cam-head{flex:none;display:flex;align-items:center;gap:7px;min-width:0;}
   /* 뒤로(홈) 버튼은 시설명과 떨어뜨려 왼쪽 칸 맨 아래에 둔다 (시설명 누를 때 잘못 눌리지 않게) */
   #cam.home-strip .cam-back{position:absolute;top:10px;height:var(--head-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
@@ -827,7 +832,7 @@
       <button class="loc-btn" id="qLoc"><small>위치</small><span>-</span></button>
       <button class="loc-btn new-dmg" id="qNewNote" type="button"><small>신규</small><span>＋</span></button>
     </div>
-    <div class="rail-t">손상명</div>
+    <div class="rail-t rail-th">손상명<button class="clr-note" id="clrNote" type="button">✕ 비우기</button></div>
     <div class="rail-list" id="bottomBar"></div>
     <div class="shot-box"><button class="photos-btn" id="photosBtn" type="button" aria-label="사진 앱"></button><button class="capture-btn" id="captureBtn"><span class="dot"></span></button></div>
   </aside>
@@ -2023,8 +2028,10 @@
   // 촬영 화면에서 시설명을 누르면 다른 시설명으로 바꾸거나 새로 추가
   document.querySelector('#cam .cam-title').addEventListener('click', function(){ openListScreen('site'); });
 
+  $('clrNote').addEventListener('click', function(){ values.note = ''; saveValues(); renderCam(); });
   function renderBottom(){
     var box = $('bottomBar');
+    $('clrNote').classList.toggle('on', !!values.note);
     box.innerHTML = '';
     var h = noteHolder();
     h.arr.forEach(function(n){
