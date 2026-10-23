@@ -141,14 +141,15 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     private static var snipOn = false        // 지금 입력칸이 손상명이면 true (웹페이지가 알려 줌)
     private static var wantNumbers = false   // 바로가기를 누른 뒤 숫자 자판(123)으로
     private weak var contentView: UIView?
-    private func installSnipBar() {
+    @discardableResult
+    private func installSnipBar() -> Bool {
         Self.snipBarRef = snipBar
         Self.numPadRef = numPad
-        guard let content = webView.scrollView.subviews.first(where: { String(describing: type(of: $0)).hasPrefix("WKContent") }) else { return }
+        guard let content = webView.scrollView.subviews.first(where: { String(describing: type(of: $0)).hasPrefix("WKContent") }) else { return false }
         contentView = content
         let base: AnyClass = type(of: content)
+        if NSStringFromClass(base).hasSuffix("_BoardSnips") { return false }   // 이미 바꿔 끼움
         let name = "\(NSStringFromClass(base))_BoardSnips"
-        if NSStringFromClass(base) == name { return }
         var cls: AnyClass? = NSClassFromString(name)
         if cls == nil, let made = objc_allocateClassPair(base, name, 0) {
             typealias ObjGetter = @convention(c) (AnyObject, Selector) -> AnyObject?
@@ -172,13 +173,17 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             objc_registerClassPair(made)
             cls = made
         }
-        if let cls = cls { object_setClass(content, cls) }
+        guard let cls = cls else { return false }
+        object_setClass(content, cls)
+        return true
     }
 
     private func setSnipOn(_ on: Bool) {
+        // 웹페이지를 다시 불러오거나 웹뷰 내부가 새로 만들어지면 바꿔 끼운 입력 뷰가 원래대로 돌아갈 수 있어 매번 확인
+        let fresh = installSnipBar()
         let wasNumbers = Self.wantNumbers
         Self.wantNumbers = false
-        guard on != Self.snipOn || wasNumbers else { return }
+        guard on != Self.snipOn || wasNumbers || fresh else { return }
         Self.snipOn = on
         contentView?.reloadInputViews()
     }

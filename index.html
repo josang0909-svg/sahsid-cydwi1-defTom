@@ -314,7 +314,8 @@
   .all-notes{grid-area:f;position:relative;z-index:30;display:none;align-items:stretch;justify-content:center;}
   .all-notes.show{display:flex;}
   .an-panel{width:calc(var(--all-w, 1) * 100%);display:flex;flex-direction:column;gap:8px;padding:10px;
-    background:rgba(12,11,10,0.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+    background:rgba(12,11,10,var(--all-bg, 0.86));
+    -webkit-backdrop-filter:blur(calc(var(--all-bg, 0.86) * 7px));backdrop-filter:blur(calc(var(--all-bg, 0.86) * 7px));}
   .an-head{flex:none;display:flex;align-items:center;gap:8px;}
   .an-head b{flex:1;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .an-head button{flex:none;padding:6px 10px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:12px;font-weight:700;}
@@ -911,7 +912,7 @@
   <div class="sheet-inner">
     <div class="sheet-head"><h3 id="nsTitle">손상 목록</h3><button data-closesheet="noteSheet">닫기</button></div>
     <div class="sheet-body">
-      <div class="add-row"><textarea id="nsNew" rows="1" placeholder="새 손상 항목 입력"></textarea><button id="nsAdd">추가</button></div>
+      <div class="add-row"><textarea id="nsNew" data-snips="1" rows="1" placeholder="새 손상 항목 입력"></textarea><button id="nsAdd">추가</button></div>
       <div class="editor" id="nsBody"></div>
     </div>
   </div>
@@ -1156,7 +1157,10 @@
     $('txtHint').textContent = opt.hint || TXT_HINT;
     $('txtOk').textContent = opt.ok || '저장';
     if(opt.hw) $('txtSheet').dataset.hw = '1'; else delete $('txtSheet').dataset.hw;
-    var t = $('txtIn'); t.value = cur;
+    var t = $('txtIn');
+    // 이미 포커스가 남아 있으면 다시 들어갈 때 focusin이 안 생겨 키보드 위 바로가기 막대가 안 바뀐다 → 한 번 빼고 다시 넣는다
+    if(document.activeElement === t) t.blur();
+    t.value = cur;
     if(opt.snips) t.dataset.snips = '1'; else delete t.dataset.snips;
     if(opt.snips) renderSnips($('txtSnips'), t); else $('txtSnips').innerHTML = '';
     $('txtSheet').classList.add('show');
@@ -1489,7 +1493,11 @@
   });
   document.querySelectorAll('[data-back]').forEach(function(b){ b.addEventListener('click', closeScreen); });
   document.querySelectorAll('[data-closesheet]').forEach(function(b){
-    b.addEventListener('click', function(){ $(b.getAttribute('data-closesheet')).classList.remove('show'); });
+    b.addEventListener('click', function(){
+      var sh = $(b.getAttribute('data-closesheet'));
+      if(sh.contains(document.activeElement)) document.activeElement.blur();   // 키보드·바로가기 막대도 같이 정리
+      sh.classList.remove('show');
+    });
   });
   document.querySelectorAll('.sheet').forEach(function(s){
     s.addEventListener('click', function(e){ if(e.target === s) s.classList.remove('show'); });
@@ -3747,6 +3755,7 @@
     ['all', 'all-h',    '카드 높이',          28,  90, 2,   'px', 48],
     ['all', 'all-fs',   '카드 글자',          10,  22, 0.5, 'px', 14],
     ['all', 'all-w',    '판 폭',             0.5,  1, 0.05, '%', 1],
+    ['all', 'all-bg',   '배경 진하기',         0,   1, 0.05, '%', 0.86],
     ['gen', 'zoom',     '글씨·화면 크기',   0.8, 1.4, 0.05, '%', 1]
   ];
   var UI_COLORS = [['accent', '강조색'], ['bg', '배경'], ['card', '카드'], ['text', '글자']];
