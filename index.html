@@ -314,8 +314,8 @@
   .all-notes{grid-area:f;position:relative;z-index:30;display:none;align-items:stretch;justify-content:center;}
   .all-notes.show{display:flex;}
   .an-panel{width:calc(var(--all-w, 1) * 100%);display:flex;flex-direction:column;gap:8px;padding:10px;
-    background:rgba(12,11,10,var(--all-bg, 0.86));
-    -webkit-backdrop-filter:blur(calc(var(--all-bg, 0.86) * 7px));backdrop-filter:blur(calc(var(--all-bg, 0.86) * 7px));}
+    background:rgba(12,11,10,var(--all-bg, 0.5));
+    -webkit-backdrop-filter:blur(calc(var(--all-bg, 0.5) * 7px));backdrop-filter:blur(calc(var(--all-bg, 0.5) * 7px));}
   .an-head{flex:none;display:flex;align-items:center;gap:8px;}
   .an-head b{flex:1;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .an-head button{flex:none;padding:6px 10px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:12px;font-weight:700;}
@@ -1093,6 +1093,24 @@
     f[k] = (f[k] || []).filter(function(x){ return x !== v; }).concat([v]);
     saveTree(); pickNote(v);
   }
+  /* 최근 손상·새 손상 기록은 '종류|부재' 이름으로 저장하므로, 이름이 바뀌면 기록도 같이 옮긴다 */
+  function rekeyNotes(fn){
+    ['recentNotes', 'fresh'].forEach(function(k){
+      var o = values[k]; if(!o) return;
+      var n = {}; Object.keys(o).forEach(function(key){ n[fn(key)] = o[key]; }); values[k] = n;
+    });
+    saveValues();
+  }
+  function renameMemberRefs(catName, old, v){ rekeyNotes(function(key){ return key === catName + '|' + old ? catName + '|' + v : key; }); }
+  function renameCatRefs(old, v){ rekeyNotes(function(key){ return key.indexOf(old + '|') === 0 ? v + key.slice(old.length) : key; }); }
+  function renameNoteRefs(catName, memName, old, v){
+    var key = catName + '|' + memName;
+    ['recentNotes', 'fresh'].forEach(function(k){
+      var l = values[k] && values[k][key]; if(!l) return;
+      values[k][key] = l.map(function(x){ return x === old ? v : x; });
+    });
+    saveValues();
+  }
   function settleFresh(){
     var f = values.fresh, k = freshKey();
     if(!f || !f[k]) return;
@@ -1656,6 +1674,7 @@
     tap: function(m){ openDetail(m); },
     rename: function(m, v){
       var old = m.name; m.name = v;
+      renameMemberRefs(curCat().name, old, v);
       if(values.member === old){ values.member = v; saveValues(); }
     },
     confirmDel: function(m){ return confirm('"' + m.name + '" 부재와 손상·양식 목록이 삭제됩니다. 계속할까요?'); },
@@ -1698,10 +1717,12 @@
   }
   function renameCat(c, v){
     var old = c.name; c.name = v;
+    renameCatRefs(old, v);
     if(values.cat === old){ values.cat = v; saveValues(); }
   }
   function renameMember(c, m, v){
     var old = m.name; m.name = v;
+    renameMemberRefs(c.name, old, v);
     if(c === curCat() && values.member === old){ values.member = v; saveValues(); }
   }
   function newMember(c, v){
@@ -1753,6 +1774,7 @@
     tap: function(){},
     rename: function(x, v, i){
       tm.mem.notes[i] = v;
+      renameNoteRefs(tm.cat.name, tm.mem.name, x, v);
       if(tm.cat === curCat() && values.member === tm.mem.name && values.note === x){ values.note = v; saveValues(); }
     },
     persist: saveTree
@@ -1895,7 +1917,7 @@
     arr: function(){ return detailMember ? detailMember.notes : []; },
     str: function(x){ return x; },
     tap: function(){},
-    rename: function(x, v, i){ detailMember.notes[i] = v; if(values.note === x){ values.note = v; saveValues(); } },
+    rename: function(x, v, i){ detailMember.notes[i] = v; renameNoteRefs(curCat().name, detailMember.name, x, v); if(values.note === x){ values.note = v; saveValues(); } },
     persist: saveTree
   });
 
@@ -1926,6 +1948,7 @@
     if(!detailMember) return;
     var old = detailMember.name;
     detailMember.name = $('detName').value;
+    renameMemberRefs(curCat().name, old, detailMember.name);
     if(values.member === old){ values.member = detailMember.name; saveValues(); }
     $('detTitle').textContent = detailMember.name;
     saveTree();
@@ -1976,6 +1999,7 @@
     rename: function(x, v, i){
       if(screenKind === 'cat'){
         var old = x.name; x.name = v;
+        renameCatRefs(old, v);
         if(values.cat === old){ values.cat = v; saveValues(); }
       } else {
         var c = curCat(); var oldv = c.sites[i]; c.sites[i] = v;
@@ -2043,7 +2067,10 @@
     Cam.start();
     if(settings.gps) startGeo();
   });
+  // 촬영 화면 위에 떠 있는 판·창은 화면을 나가거나 찍거나 새 손상을 넣으면 닫는다
+  function closeCamPanels(){ $('allNotes').classList.remove('show'); $('famPop').classList.remove('show'); }
   $('camBack').addEventListener('click', function(){
+    closeCamPanels();
     Cam.stop();
     stopGeo();
     $('cam').classList.remove('show');
@@ -2129,7 +2156,8 @@
 
   /* 전체 보기 판: 미리보기 위에 모든 손상을 가나다순 카드로. 고르면 닫힌다. 카드를 길게 누르면 이름 수정.
      열·행·카드 높이·글자·판 폭은 화면 설정 [전체 보기 판]에서 */
-  function openAllNotes(){
+  function openAllNotes(){ drawAllNotes(); $('anGrid').scrollTop = 0; }
+  function drawAllNotes(){
     var ov = $('allNotes'), g = $('anGrid'), h = noteHolder();
     $('anTitle').textContent = oneLine(h.name) + ' 손상명 ' + h.arr.length;
     g.innerHTML = '';
@@ -2148,7 +2176,6 @@
       var gap = parseFloat(getComputedStyle(g).rowGap) || 6;
       g.style.gridAutoRows = Math.max(24, Math.floor((g.clientHeight - gap * (rows - 1)) / rows)) + 'px';
     }
-    g.scrollTop = 0;
     // 카드에 안 들어가는 긴 이름은 글씨를 줄인다 (60%까지)
     g.querySelectorAll('.an-card').forEach(function(c){
       var f = parseFloat(getComputedStyle(c).fontSize), min = f * 0.6;
@@ -2224,6 +2251,7 @@
       var dup = h.arr.indexOf(v);
       if(dup >= 0 && dup !== i){ showToast('이미 있는 손상명입니다'); return; }
       h.arr[i] = v;
+      renameNoteRefs(values.cat, values.member, old, v);
       if(values.note === old){ values.note = v; saveValues(); }
       saveTree(); renderCam();
     }, { title: '손상명 수정 (' + oneLine(h.name) + ')', snips: true });
@@ -2261,6 +2289,9 @@
     $('camSite').textContent = values.site || '시설명 미입력';
     $('qLoc').querySelector('span').textContent = values.loc || '-';
     renderSidebar(); renderBottom(); renderGps();
+    // 전체 보기 판 · 계열 창이 열려 있으면 지금 부재의 손상으로 다시 그린다
+    if($('allNotes').classList.contains('show')) drawAllNotes();
+    if($('famPop').classList.contains('show')){ famOpen = ''; drawFamilies(); }
     layoutFrame();
     fitBtns();
   }
@@ -2353,7 +2384,7 @@
     tap: function(x){
       $('noteSheet').classList.remove('show'); pickNote(x); refreshAll();
     },
-    rename: function(x, v, i){ noteHolder().arr[i] = v; if(values.note === x){ values.note = v; saveValues(); } },
+    rename: function(x, v, i){ noteHolder().arr[i] = v; renameNoteRefs(values.cat, values.member, x, v); if(values.note === x){ values.note = v; saveValues(); } },
     persist: saveTree
   });
   $('nsAdd').addEventListener('click', function(){
@@ -2379,7 +2410,7 @@
   $('qNewNote').addEventListener('click', function(){
     editText('', function(v){
       v = v.trim(); if(!v) return;
-      addFreshNote(v); renderCam();
+      closeCamPanels(); addFreshNote(v); renderCam();
       showToast('"' + oneLine(v) + '" 적용');
     }, { title: '신규 손상 (' + oneLine(noteHolder().name) + ')', ok: '적용', snips: true, hw: true, hint: '입력하면 손상 목록 맨 위에 추가되고 바로 보드판에 들어갑니다. 엔터는 줄바꿈입니다.' });
   });
@@ -3213,6 +3244,7 @@
   var shooting = 0;
   function busy(){ return shooting && Date.now() - shooting < 15000; }
   $('captureBtn').addEventListener('click', function(){
+    closeCamPanels();
     if(busy() || $('previewModal').classList.contains('show')) return;
     if(!Cam.isLive()) return openSystemCamera();
     shooting = Date.now();
@@ -3755,7 +3787,7 @@
     ['all', 'all-h',    '카드 높이',          28,  90, 2,   'px', 48],
     ['all', 'all-fs',   '카드 글자',          10,  22, 0.5, 'px', 14],
     ['all', 'all-w',    '판 폭',             0.5,  1, 0.05, '%', 1],
-    ['all', 'all-bg',   '배경 진하기',         0,   1, 0.05, '%', 0.86],
+    ['all', 'all-bg',   '배경 진하기',         0,   1, 0.05, '%', 0.5],
     ['gen', 'zoom',     '글씨·화면 크기',   0.8, 1.4, 0.05, '%', 1]
   ];
   var UI_COLORS = [['accent', '강조색'], ['bg', '배경'], ['card', '카드'], ['text', '글자']];
