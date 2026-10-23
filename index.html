@@ -1214,8 +1214,8 @@
     var el = document.activeElement, sn = (settings.snips || [])[i];
     if(!sn || !el || !el.dataset || el.dataset.snips !== '1') return;
     insertSnip(el, sn);
-    // 바로 숫자를 칠 수 있게 앱 숫자 키패드로 (ㄱㄴㄷ 키로 돌아감)
-    window.webkit.messageHandlers.board.postMessage({ type:'kbNumbers' });
+    // = 가 있는 바로가기만 (커서가 = 뒤에 놓여 숫자를 칠 차례) 앱 숫자 키패드로 (ㄱㄴㄷ 키로 돌아감)
+    if(sn.indexOf('=') >= 0) window.webkit.messageHandlers.board.postMessage({ type:'kbNumbers' });
   };
   // 손상명 입력칸에 들어갈 때만 키보드 위 막대에 바로가기 버튼
   document.addEventListener('focusin', function(e){
@@ -1638,8 +1638,13 @@
     $('origToggle').checked = settings.saveOrig !== false;
     $('snipEdit').value = (settings.snips || []).join('\n');
   }
+  // 한 줄에 하나. 앞뒤 띄어쓰기도 그대로 넣는다 (예: "Asp " → Asp 뒤에 한 칸). 빈 줄만 뺀다
+  function readSnips(){
+    return $('snipEdit').value.replace(/\r/g, '').split('\n').filter(function(x){ return x.trim() !== ''; });
+  }
+  $('snipEdit').addEventListener('input', function(){ settings.snips = readSnips(); saveSettings(); sendSnips(); });
   $('snipEdit').addEventListener('change', function(){
-    settings.snips = $('snipEdit').value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean);
+    settings.snips = readSnips();
     saveSettings(); sendSnips(); showToast('입력 바로가기 저장');
   });
   $('gpsToggle').addEventListener('change', function(){
