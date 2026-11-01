@@ -6,6 +6,7 @@ import AVFoundation
 import MediaPlayer
 import AVKit
 import CoreMotion
+import ImageIO
 
 /// GitHub Pages의 보드판 웹페이지를 띄우는 화면.
 /// 실행할 때마다 최신 페이지를 받아 저장해 두고, 인터넷이 없으면 마지막으로 받은 페이지를 연다.
@@ -411,23 +412,30 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     /// 기본 카메라와 같은 화질 처리: 최고 해상도, 화질 우선(Deep Fusion·스마트 HDR·Photonic Engine),
     /// 저조도 보정, 접사 렌즈 자동 전환, 셔터 지연 최소화
     private var photoCodec: AVVideoCodecType = .jpeg
-    private var photoDims: Any?   // iOS 16+: CMVideoDimensions
+    private var photoDims: Any?       // iOS 16+: CMVideoDimensions (평소)
+    private var photoDimsHigh: Any?   // iOS 16+: 48MP (있는 폰만)
+    private var highCaptures: Set<Int64> = []   // camQueue: 48MP로 찍어 24MP로 줄일 사진
 
     private func configureQuality(_ device: AVCaptureDevice) {
         // 화질 우선: 여러 장을 합성하는 Deep Fusion·스마트 HDR을 기본 카메라처럼 자동 사용
         photoOutput.maxPhotoQualityPrioritization = .quality
         // 사진 앱 기본값처럼 고효율(HEIF) 원본 저장, 지원하지 않으면 JPEG
         photoCodec = photoOutput.availablePhotoCodecTypes.contains(.hevc) ? .hevc : .jpeg
-        // 최고 해상도: 기본 카메라 기본값과 같은 범위(최대 24MP)에서 가장 큰 크기.
-        // 48MP는 사진 한 장이 너무 커서 보드판 합성이 느려지고 메모리가 부족해질 수 있어 쓰지 않는다
+        // 해상도: 평소에는 24MP 이하 중 가장 큰 크기(15 프로는 12MP).
+        // 48MP 센서 폰은 기본 카메라처럼 밝을 때 1× 에서 48MP로 찍어 24MP로 줄여 저장한다 (photoDimsHigh)
         if #available(iOS 16.0, *) {
             let dims = device.activeFormat.supportedMaxPhotoDimensions
-            let pick = dims.filter { Int($0.width) * Int($0.height) <= 25_000_000 }
-                .max { Int($0.width) * Int($0.height) < Int($1.width) * Int($1.height) }
-                ?? dims.min { Int($0.width) * Int($0.height) < Int($1.width) * Int($1.height) }
+            func px(_ d: CMVideoDimensions) -> Int { Int(d.width) * Int(d.height) }
+            let pick = dims.filter { px($0) <= 25_000_000 }.max { px($0) < px($1) } ?? dims.min { px($0) < px($1) }
+            let high = dims.max { px($0) < px($1) }
             if let pick = pick {
-                photoOutput.maxPhotoDimensions = pick
                 photoDims = pick
+                if let high = high, px(high) > 40_000_000 {
+                    photoDimsHigh = high
+                    photoOutput.maxPhotoDimensions = high
+                } else {
+                    photoOutput.maxPhotoDimensions = pick
+                }
             }
         } else {
             photoOutput.isHighResolutionCaptureEnabled = true
@@ -602,6 +610,15 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         return a.x < 0 ? .landscapeRight : .landscapeLeft
     }
 
+    /// 48MP로 찍을지: 메인(1×) 렌즈를 쓰고 있고, 줌 없이, 충분히 밝을 때 (어두우면 12MP가 노이즈가 적다)
+    private var useHighRes: Bool {
+        guard photoDimsHigh != nil, !flashOn, let d = camDevice else { return false }
+        if d.videoZoomFactor > zoomBase * 1.05 || d.videoZoomFactor < zoomBase * 0.95 { return false }
+        if d.isVirtualDevice, let active = d.activePrimaryConstituent, active.deviceType != .builtInWideAngleCamera { return false }
+        let iso = d.isVirtualDevice ? (d.activePrimaryConstituent?.iso ?? d.iso) : d.iso
+        return iso <= 400
+    }
+
     private func capturePhoto(maxW: CGFloat, id: Int) {
         let held = heldOrientation()
         camQueue.async {
@@ -610,7 +627,12 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: self.photoCodec])
             settings.photoQualityPrioritization = .quality
             if #available(iOS 16.0, *) {
-                if let dims = self.photoDims as? CMVideoDimensions { settings.maxPhotoDimensions = dims }
+                if self.useHighRes, let hi = self.photoDimsHigh as? CMVideoDimensions {
+                    settings.maxPhotoDimensions = hi
+                    self.highCaptures.insert(settings.uniqueID)
+                } else if let dims = self.photoDims as? CMVideoDimensions {
+                    settings.maxPhotoDimensions = dims
+                }
             } else {
                 settings.isHighResolutionPhotoEnabled = true
             }
@@ -622,15 +644,43 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         let key = photo.resolvedSettings.uniqueID
-        let (maxW, id) = camQueue.sync { self.captures.removeValue(forKey: key) ?? (0, 0) }
-        guard error == nil, let data = photo.fileDataRepresentation() else {
+        let (maxW, id, high) = camQueue.sync { () -> (CGFloat, Int, Bool) in
+            let c = self.captures.removeValue(forKey: key) ?? (0, 0)
+            return (c.maxW, c.id, self.highCaptures.remove(key) != nil)
+        }
+        guard error == nil, var data = photo.fileDataRepresentation() else {
             return js("window.__camShot && window.__camShot(null, false, \(id))")
         }
+        // 48MP 사진은 기본 카메라처럼 24MP로 줄여 저장 (촬영 정보·GPS 등 메타데이터는 그대로)
+        if high, let reduced = Self.resize(data, maxPixel: 5712) { data = reduced }
         // 저장(save)은 메인에서 읽는다. 번호를 같이 둬서 다른 사진의 원본이 붙지 않게 한다
         DispatchQueue.main.async { self.lastPhoto = data; self.lastPhotoId = id }
         // 웹페이지에는 보드판을 찍을 크기로 줄여서 보낸다 (원본 12MP를 문자열로 넘기면 느려지고 메모리가 쌓임)
         let small = Self.downscale(data, maxWidth: maxW) ?? Self.toJPEG(data) ?? data
         js("window.__camShot && window.__camShot('data:image/jpeg;base64,\(small.base64EncodedString())', true, \(id))")
+    }
+
+    /// 긴 변을 maxPixel로 줄여 같은 형식(HEIF/JPEG)으로 다시 저장. 방향 태그와 메타데이터는 그대로 둔다
+    private static func resize(_ data: Data, maxPixel: Int) -> Data? {
+        guard let src = CGImageSourceCreateWithData(data as CFData, nil),
+              let type = CGImageSourceGetType(src),
+              var props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any] else { return nil }
+        let opts: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                                     kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+                                     kCGImageSourceCreateThumbnailWithTransform: false]
+        guard let img = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
+        props[kCGImagePropertyPixelWidth] = img.width
+        props[kCGImagePropertyPixelHeight] = img.height
+        if var exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any] {
+            exif[kCGImagePropertyExifPixelXDimension] = img.width
+            exif[kCGImagePropertyExifPixelYDimension] = img.height
+            props[kCGImagePropertyExifDictionary] = exif
+        }
+        props[kCGImageDestinationLossyCompressionQuality] = 0.9
+        let out = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(out, type, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, img, props as CFDictionary)
+        return CGImageDestinationFinalize(dest) ? out as Data : nil
     }
 
     /// HEIF 원본은 웹페이지가 못 읽을 수 있어 JPEG로 바꿔 보낸다 (원래 JPEG면 그대로)
