@@ -30,7 +30,8 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     private var zoomBase: CGFloat = 1
     /// 웹페이지 배율 버튼에 보일 배율 (.5, 1, 2, 3 …)
     private var zoomPresets: [Double] = [1, 2]
-    private let zoomMaxDisplay: CGFloat = 10
+    /// 최대 배율: 기본 카메라처럼 망원 렌즈 배율 × 5 (15 프로 3× → 15×, 프로 맥스 5× → 25×), 망원이 없으면 10×
+    private var zoomMaxDisplay: CGFloat = 10
 
     /// 볼륨 버튼·블루투스 리모컨 셔터 (iOS 17.2+ 는 카메라 앱과 같은 공식 방식, 그 아래는 볼륨 변화 감지)
     private var shutterInteraction: UIInteraction?
@@ -389,6 +390,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         for f in switchOver where f > zoomBase + 0.01 { presets.append(Double((f / zoomBase * 10).rounded() / 10)) }
         if presets.last ?? 1 <= 1 { presets.append(2) }
         zoomPresets = presets
+        zoomMaxDisplay = max(10, CGFloat(presets.last ?? 1) * 5)
         session.beginConfiguration()
         session.sessionPreset = .photo
         let ok = session.canAddInput(input) && session.canAddOutput(photoOutput)

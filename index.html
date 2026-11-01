@@ -2877,7 +2877,7 @@
       ruler.style.top = Math.round(fh / 2 - R) + 'px';
       var K = PX / R, lz = Math.log(z) / Math.LN2, html = '';
       var lo = Math.log(min) / Math.LN2, hi = Math.log(max) / Math.LN2;
-      var majors = presets.concat([5, 10]).filter(function(p, i, a){ return p >= min - 0.01 && p <= max + 0.01 && a.indexOf(p) === i; });
+      var majors = presets.concat([5, 10, 15, 25]).filter(function(p, i, a){ return p >= min - 0.01 && p <= max + 0.01 && a.indexOf(p) === i; });
       function item(a, cls, inner){
         return '<div class="zi' + cls + '" style="top:' + R + 'px;width:' + R + 'px;transform-origin:' + R + 'px 0;transform:rotate(' + (a * 180 / Math.PI).toFixed(2) + 'deg)">' + inner + '</div>';
       }
