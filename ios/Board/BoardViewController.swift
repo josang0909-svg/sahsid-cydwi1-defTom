@@ -648,16 +648,35 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             let c = self.captures.removeValue(forKey: key) ?? (0, 0)
             return (c.maxW, c.id, self.highCaptures.remove(key) != nil)
         }
-        guard error == nil, var data = photo.fileDataRepresentation() else {
+        guard error == nil, let data = photo.fileDataRepresentation() else {
             return js("window.__camShot && window.__camShot(null, false, \(id))")
         }
-        // 48MP 사진은 기본 카메라처럼 24MP로 줄여 저장 (촬영 정보·GPS 등 메타데이터는 그대로)
-        if high, let reduced = Self.resize(data, maxPixel: 5712) { data = reduced }
         // 저장(save)은 메인에서 읽는다. 번호를 같이 둬서 다른 사진의 원본이 붙지 않게 한다
         DispatchQueue.main.async { self.lastPhoto = data; self.lastPhotoId = id }
-        // 웹페이지에는 보드판을 찍을 크기로 줄여서 보낸다 (원본 12MP를 문자열로 넘기면 느려지고 메모리가 쌓임)
-        let small = Self.downscale(data, maxWidth: maxW) ?? Self.toJPEG(data) ?? data
+        // 웹페이지에는 보드판을 찍을 크기로 줄여서 보낸다 (원본을 문자열로 넘기면 느려지고 메모리가 쌓임)
+        let webMax = maxW > 0 ? Int(maxW) : (high ? 5712 : 0)
+        let small = (webMax > 0 ? Self.thumbJPEG(data, maxPixel: webMax) : nil) ?? Self.toJPEG(data) ?? data
         js("window.__camShot && window.__camShot('data:image/jpeg;base64,\(small.base64EncodedString())', true, \(id))")
+        // 48MP 원본은 결과 화면을 띄운 뒤 뒤에서 24MP로 줄여 바꿔 둔다 (촬영 정보·GPS 등 메타데이터는 그대로).
+        // 그 전에 저장을 누르면 48MP 원본이 그대로 저장된다
+        if high {
+            DispatchQueue.global(qos: .utility).async {
+                guard let reduced = Self.resize(data, maxPixel: 5712) else { return }
+                DispatchQueue.main.async {
+                    if self.lastPhotoId == id, self.lastPhoto != nil { self.lastPhoto = reduced }
+                }
+            }
+        }
+    }
+
+    /// ImageIO로 빠르게 줄여 JPEG로 (방향은 바로 세워서)
+    private static func thumbJPEG(_ data: Data, maxPixel: Int) -> Data? {
+        guard let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let opts: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                                     kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+                                     kCGImageSourceCreateThumbnailWithTransform: true]
+        guard let img = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
+        return UIImage(cgImage: img).jpegData(compressionQuality: 0.92)
     }
 
     /// 긴 변을 maxPixel로 줄여 같은 형식(HEIF/JPEG)으로 다시 저장. 방향 태그와 메타데이터는 그대로 둔다
@@ -689,18 +708,6 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         return UIImage(data: data)?.jpegData(compressionQuality: 0.92)
     }
 
-    private static func downscale(_ data: Data, maxWidth: CGFloat) -> Data? {
-        guard maxWidth > 0, let image = UIImage(data: data) else { return nil }
-        let size = image.size
-        guard size.width > maxWidth else { return nil }
-        let target = CGSize(width: maxWidth, height: (size.height * maxWidth / size.width).rounded())
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let scaled = UIGraphicsImageRenderer(size: target, format: format).image { _ in
-            image.draw(in: CGRect(origin: .zero, size: target))
-        }
-        return scaled.jpegData(compressionQuality: 0.92)
-    }
 
     // MARK: - 사진 저장
 
