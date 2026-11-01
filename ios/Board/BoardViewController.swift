@@ -395,6 +395,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         if ok { session.addInput(input); session.addOutput(photoOutput) }
         session.commitConfiguration()
         guard ok else { return }   // 실패하면 다음에 다시 시도
+        configureQuality(device)
         camConfigured = true
         DispatchQueue.main.async {
             let layer = AVCaptureVideoPreviewLayer(session: self.session)
@@ -403,6 +404,46 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
             self.previewLayer = layer
             self.applyPreviewFrame()
         }
+    }
+
+    /// 기본 카메라와 같은 화질 처리: 최고 해상도, 화질 우선(Deep Fusion·스마트 HDR·Photonic Engine),
+    /// 저조도 보정, 접사 렌즈 자동 전환, 셔터 지연 최소화
+    private var photoCodec: AVVideoCodecType = .jpeg
+    private var photoDims: Any?   // iOS 16+: CMVideoDimensions
+
+    private func configureQuality(_ device: AVCaptureDevice) {
+        // 화질 우선: 여러 장을 합성하는 Deep Fusion·스마트 HDR을 기본 카메라처럼 자동 사용
+        photoOutput.maxPhotoQualityPrioritization = .quality
+        // 사진 앱 기본값처럼 고효율(HEIF) 원본 저장, 지원하지 않으면 JPEG
+        photoCodec = photoOutput.availablePhotoCodecTypes.contains(.hevc) ? .hevc : .jpeg
+        // 최고 해상도: 기본 카메라 기본값과 같은 범위(최대 24MP)에서 가장 큰 크기.
+        // 48MP는 사진 한 장이 너무 커서 보드판 합성이 느려지고 메모리가 부족해질 수 있어 쓰지 않는다
+        if #available(iOS 16.0, *) {
+            let dims = device.activeFormat.supportedMaxPhotoDimensions
+            let pick = dims.filter { Int($0.width) * Int($0.height) <= 25_000_000 }
+                .max { Int($0.width) * Int($0.height) < Int($1.width) * Int($1.height) }
+                ?? dims.min { Int($0.width) * Int($0.height) < Int($1.width) * Int($1.height) }
+            if let pick = pick {
+                photoOutput.maxPhotoDimensions = pick
+                photoDims = pick
+            }
+        } else {
+            photoOutput.isHighResolutionCaptureEnabled = true
+        }
+        // 누르는 순간 찍히게(제로 셔터 랙), 처리 중에도 연달아 찍을 수 있게
+        if #available(iOS 17.0, *) {
+            if photoOutput.isZeroShutterLagSupported { photoOutput.isZeroShutterLagEnabled = true }
+            if photoOutput.isResponsiveCaptureSupported { photoOutput.isResponsiveCaptureEnabled = true }
+        }
+        guard (try? device.lockForConfiguration()) != nil else { return }
+        // 어두운 곳에서 자동 밝기 보정
+        if device.isLowLightBoostSupported { device.automaticallyEnablesLowLightBoostWhenAvailable = true }
+        // 가까이 대면 기본 카메라처럼 초광각(접사)으로 자동 전환, 멀리는 망원으로 자동 전환
+        if device.isVirtualDevice {
+            device.setPrimaryConstituentDeviceSwitchingBehavior(.auto, restrictedSwitchingBehaviorConditions: [])
+        }
+        if device.isSmoothAutoFocusSupported { device.isSmoothAutoFocusEnabled = false }   // 사진은 빠른 초점
+        device.unlockForConfiguration()
     }
 
     // MARK: - 초점·밝기 (기본 카메라처럼: 누르면 그 자리 초점·노출, 길게 누르면 잠금, 위아래로 밝기)
@@ -564,7 +605,13 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         camQueue.async {
             guard self.session.isRunning else { return self.js("window.__camShot && window.__camShot(null, false, \(id))") }
             if let held = held { self.photoOutput.connection(with: .video)?.videoOrientation = held }
-            let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+            let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: self.photoCodec])
+            settings.photoQualityPrioritization = .quality
+            if #available(iOS 16.0, *) {
+                if let dims = self.photoDims as? CMVideoDimensions { settings.maxPhotoDimensions = dims }
+            } else {
+                settings.isHighResolutionPhotoEnabled = true
+            }
             self.captures[settings.uniqueID] = (maxW, id)
             if self.photoOutput.supportedFlashModes.contains(.on) { settings.flashMode = self.flashOn ? .on : .off }
             self.photoOutput.capturePhoto(with: settings, delegate: self)
@@ -580,8 +627,14 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         // 저장(save)은 메인에서 읽는다. 번호를 같이 둬서 다른 사진의 원본이 붙지 않게 한다
         DispatchQueue.main.async { self.lastPhoto = data; self.lastPhotoId = id }
         // 웹페이지에는 보드판을 찍을 크기로 줄여서 보낸다 (원본 12MP를 문자열로 넘기면 느려지고 메모리가 쌓임)
-        let small = Self.downscale(data, maxWidth: maxW) ?? data
+        let small = Self.downscale(data, maxWidth: maxW) ?? Self.toJPEG(data) ?? data
         js("window.__camShot && window.__camShot('data:image/jpeg;base64,\(small.base64EncodedString())', true, \(id))")
+    }
+
+    /// HEIF 원본은 웹페이지가 못 읽을 수 있어 JPEG로 바꿔 보낸다 (원래 JPEG면 그대로)
+    private static func toJPEG(_ data: Data) -> Data? {
+        if data.starts(with: [0xFF, 0xD8]) { return nil }
+        return UIImage(data: data)?.jpegData(compressionQuality: 0.92)
     }
 
     private static func downscale(_ data: Data, maxWidth: CGFloat) -> Data? {
