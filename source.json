@@ -1,5 +1,5 @@
 {
-  "name": "현장 보드판",
+  "name": "현장 앱",
   "identifier": "com.josang0909.fieldboard.source",
   "website": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom",
   "apps": [
@@ -19,6 +19,26 @@
           "date": "2026-11-01T17:39:37Z",
           "downloadURL": "https://github.com/josang0909-svg/sahsid-cydwi1-defTom/releases/download/ios-v1.0.48/Board.ipa",
           "size": 272602,
+          "minOSVersion": "15.0"
+        }
+      ]
+    },
+    {
+      "name": "SiteNavi",
+      "bundleIdentifier": "com.josang0909.sitenavi",
+      "developerName": "josang0909",
+      "localizedDescription": "현장내비: 용역별 시설물 길안내",
+      "iconURL": "https://site-navi.pages.dev/app/icon-512.png",
+      "version": "1.0.1",
+      "versionDate": "2026-11-02T09:11:53Z",
+      "downloadURL": "https://site-navi.pages.dev/app/SiteNavi-1.0.1.ipa",
+      "size": 270351,
+      "versions": [
+        {
+          "version": "1.0.1",
+          "date": "2026-11-02T09:11:53Z",
+          "downloadURL": "https://site-navi.pages.dev/app/SiteNavi-1.0.1.ipa",
+          "size": 270351,
           "minOSVersion": "15.0"
         }
       ]

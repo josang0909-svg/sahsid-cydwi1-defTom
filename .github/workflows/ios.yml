@@ -51,6 +51,7 @@ jobs:
           gh release create "ios-v$V" Board.ipa --title "아이폰 앱 $V" --notes "SideStore용 자동 빌드"
           URL="https://github.com/${{ github.repository }}/releases/download/ios-v$V/Board.ipa"
           python3 ios/make_source.py "$V" "$URL" "$(stat -f%z Board.ipa)" source.json
+          python3 ios/merge_source.py https://site-navi.pages.dev/app/source.json source.json   # 현장내비도 같은 소스로
           # SideStore 소스는 main의 source.json(raw 주소)으로 제공
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

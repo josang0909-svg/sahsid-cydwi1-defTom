@@ -1,0 +1,32 @@
+# SideStore 소스(source.json) 하나로 보드판과 현장내비를 같이 받게 한다.
+# 현장내비 저장소가 새 ipa를 올리면(site-navi.pages.dev/app/source.json) 한 시간 안에 여기로 합쳐진다.
+# 바로 합치려면 Actions에서 이 작업을 직접 실행(Run workflow).
+name: SideStore 소스 합치기
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: source-json
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 현장내비 소스 합치기
+        run: |
+          python3 ios/merge_source.py https://site-navi.pages.dev/app/source.json source.json
+          if git diff --quiet source.json; then echo "바뀐 것 없음"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add source.json
+          git commit -m "SideStore 소스: 현장내비 갱신"
+          git pull --rebase origin main
+          git push origin HEAD:main
