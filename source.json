@@ -29,16 +29,16 @@
       "developerName": "josang0909",
       "localizedDescription": "현장내비: 용역별 시설물 길안내",
       "iconURL": "https://site-navi.pages.dev/app/icon-512.png",
-      "version": "1.0.1",
-      "versionDate": "2026-11-02T09:11:53Z",
-      "downloadURL": "https://site-navi.pages.dev/app/SiteNavi-1.0.1.ipa",
-      "size": 270351,
+      "version": "1.0.2",
+      "versionDate": "2026-11-03T17:42:30Z",
+      "downloadURL": "https://site-navi.pages.dev/app/SiteNavi-1.0.2.ipa",
+      "size": 280452,
       "versions": [
         {
-          "version": "1.0.1",
-          "date": "2026-11-02T09:11:53Z",
-          "downloadURL": "https://site-navi.pages.dev/app/SiteNavi-1.0.1.ipa",
-          "size": 270351,
+          "version": "1.0.2",
+          "date": "2026-11-03T17:42:30Z",
+          "downloadURL": "https://site-navi.pages.dev/app/SiteNavi-1.0.2.ipa",
+          "size": 280452,
           "minOSVersion": "15.0"
         }
       ]
