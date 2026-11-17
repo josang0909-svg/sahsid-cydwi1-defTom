@@ -406,6 +406,7 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         if ok { session.addInput(input); session.addOutput(photoOutput) }
         session.commitConfiguration()
         guard ok else { return }   // 실패하면 다음에 다시 시도
+        pickPreviewFormat(device)
         configureQuality(device)
         camConfigured = true
         DispatchQueue.main.async {
@@ -423,6 +424,33 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
     private var photoDims: Any?       // iOS 16+: CMVideoDimensions (평소)
     private var photoDimsHigh: Any?   // iOS 16+: 48MP (있는 폰만)
     private var highCaptures: Set<Int64> = []   // camQueue: 48MP로 찍어 24MP로 줄일 사진
+
+    /// 미리보기 화질: .photo 기본 설정이 고른 형식보다 나은 형식(실시간 HDR 지원, 더 큰 영상)이 있으면 바꾼다.
+    /// 사진 쪽 성능(최대 사진 크기·화질 우선 처리)은 떨어지지 않는 형식만 고른다
+    private func pickPreviewFormat(_ device: AVCaptureDevice) {
+        guard #available(iOS 16.0, *) else { return }
+        func photoPx(_ f: AVCaptureDevice.Format) -> Int {
+            f.supportedMaxPhotoDimensions.map { Int($0.width) * Int($0.height) }.max() ?? 0
+        }
+        func score(_ f: AVCaptureDevice.Format) -> Int {
+            let d = CMVideoFormatDescriptionGetDimensions(f.formatDescription)
+            return (f.isVideoHDRSupported ? 100_000 : 0) + Int(d.width)
+        }
+        let current = device.activeFormat
+        let minPhoto = photoPx(current)
+        let cands = device.formats.filter { f in
+            let d = CMVideoFormatDescriptionGetDimensions(f.formatDescription)
+            return Int(d.width) * 3 == Int(d.height) * 4 && d.width <= 4032
+                && CMFormatDescriptionGetMediaSubType(f.formatDescription) == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+                && f.videoSupportedFrameRateRanges.contains { $0.maxFrameRate >= 30 }
+                && (f.isHighPhotoQualitySupported || !current.isHighPhotoQualitySupported)
+        }.filter { photoPx($0) >= minPhoto }
+        guard let best = cands.max(by: { score($0) < score($1) }), score(best) > score(current),
+              (try? device.lockForConfiguration()) != nil else { return }
+        device.activeFormat = best
+        if best.isVideoHDRSupported { device.automaticallyAdjustsVideoHDREnabled = true }   // 기본 카메라처럼 밝은 하늘·그늘을 함께
+        device.unlockForConfiguration()
+    }
 
     private func configureQuality(_ device: AVCaptureDevice) {
         // 화질 우선: 여러 장을 합성하는 Deep Fusion·스마트 HDR을 기본 카메라처럼 자동 사용
@@ -460,7 +488,6 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         if device.isVirtualDevice {
             device.setPrimaryConstituentDeviceSwitchingBehavior(.auto, restrictedSwitchingBehaviorConditions: [])
         }
-        if device.isSmoothAutoFocusSupported { device.isSmoothAutoFocusEnabled = false }   // 사진은 빠른 초점
         device.unlockForConfiguration()
     }
 
@@ -478,8 +505,14 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
                 guard let d = self.camDevice, (try? d.lockForConfiguration()) != nil else { return }
                 if d.isFocusPointOfInterestSupported { d.focusPointOfInterest = devPoint }
                 if d.isExposurePointOfInterestSupported { d.exposurePointOfInterest = devPoint }
-                if d.isFocusModeSupported(.autoFocus) { d.focusMode = .autoFocus }
-                if d.isExposureModeSupported(.autoExpose) { d.exposureMode = .autoExpose }
+                // 기본 카메라처럼: 누른 자리를 계속 따라가며 맞춘다(한 번 맞추고 멈추지 않음). 길게 누르면 맞춘 뒤 잠금
+                if lock {
+                    if d.isFocusModeSupported(.autoFocus) { d.focusMode = .autoFocus }
+                    if d.isExposureModeSupported(.autoExpose) { d.exposureMode = .autoExpose }
+                } else {
+                    if d.isFocusModeSupported(.continuousAutoFocus) { d.focusMode = .continuousAutoFocus }
+                    if d.isExposureModeSupported(.continuousAutoExposure) { d.exposureMode = .continuousAutoExposure }
+                }
                 d.setExposureTargetBias(0, completionHandler: nil)
                 d.isSubjectAreaChangeMonitoringEnabled = !lock
                 d.unlockForConfiguration()
