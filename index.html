@@ -3019,7 +3019,7 @@
   var Focus = (function(){
     var frame = $('camFrame'), box = $('focusBox'), sun = $('focusSun'), lockTag = $('focusLock');
     var backend = null, bias = 0, active = false, dimT = 0, g = null;
-    var RANGE = 2, PX = 70;   // 밝기 ±2단, 70px = 1단
+    var RANGE = 3, PX = 50;   // 밝기 ±3단(어두운 곳에서 더 밝게), 50px = 1단
     function setup(fn){ backend = fn; }
     function reset(){ backend = null; cancel(); hide(); }
     function hide(){ active = false; box.classList.remove('show'); lockTag.classList.remove('show'); bias = 0; }

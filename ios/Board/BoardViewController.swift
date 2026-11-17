@@ -484,6 +484,11 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         guard (try? device.lockForConfiguration()) != nil else { return }
         // 어두운 곳에서 자동 밝기 보정
         if device.isLowLightBoostSupported { device.automaticallyEnablesLowLightBoostWhenAvailable = true }
+        // 어두운 곳: 자동 노출이 셔터를 더 오래 열 수 있게 (기본은 약 1/30초에서 멈춰 어둡게 찍힘).
+        // 밝은 곳은 자동 노출이 알아서 짧게 쓰므로 영향 없음. 1/4초는 손떨림 보정으로 손에 들고 찍을 수 있는 정도
+        let longest = CMTime(value: 1, timescale: 4)
+        let cap = CMTimeMinimum(longest, device.activeFormat.maxExposureDuration)
+        if CMTimeCompare(cap, device.activeMaxExposureDuration) > 0 { device.activeMaxExposureDuration = cap }
         // 가까이 대면 기본 카메라처럼 초광각(접사)으로 자동 전환, 멀리는 망원으로 자동 전환
         if device.isVirtualDevice {
             device.setPrimaryConstituentDeviceSwitchingBehavior(.auto, restrictedSwitchingBehaviorConditions: [])
