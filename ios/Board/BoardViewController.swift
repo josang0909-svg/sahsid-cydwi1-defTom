@@ -196,8 +196,16 @@ final class BoardViewController: UIViewController, WKScriptMessageHandler, WKUID
         contentView?.reloadInputViews()
     }
 
+    /// 이 기기의 노치·다이내믹 아일랜드 여백. 키보드 위 막대는 키보드 창에 붙어서 여백을 못 받는 경우가 있어 직접 넘겨준다
+    static var sideInsets: UIEdgeInsets = .zero
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        let ins = view.window?.safeAreaInsets ?? view.safeAreaInsets
+        if ins != Self.sideInsets {
+            Self.sideInsets = ins
+            snipBar.setNeedsLayout(); numPad.setNeedsLayout()
+        }
         applyPreviewFrame()
     }
 
@@ -834,6 +842,8 @@ final class SnipBar: UIInputView {
     var onDone: (() -> Void)?
     private let scroll = UIScrollView()
     private let stack = UIStackView()
+    private var leadC: NSLayoutConstraint!
+    private var trailC: NSLayoutConstraint!
 
     init() {
         super.init(frame: CGRect(x: 0, y: 0, width: 320, height: 46), inputViewStyle: .keyboard)
@@ -852,9 +862,7 @@ final class SnipBar: UIInputView {
         addSubview(scroll); addSubview(done)
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: 46),
-            done.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -14),
             done.centerYAnchor.constraint(equalTo: centerYAnchor),
-            scroll.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 8),
             scroll.trailingAnchor.constraint(equalTo: done.leadingAnchor, constant: -10),
             scroll.topAnchor.constraint(equalTo: topAnchor),
             scroll.bottomAnchor.constraint(equalTo: bottomAnchor),
@@ -863,7 +871,19 @@ final class SnipBar: UIInputView {
             stack.centerYAnchor.constraint(equalTo: scroll.centerYAnchor),
             stack.heightAnchor.constraint(equalToConstant: 34),
         ])
+        leadC = scroll.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8)
+        trailC = done.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14)
+        NSLayoutConstraint.activate([leadC, trailC])
         setItems(["mm", "cm", "(H=cm)", "(T=cm)", "(B=cm)"])
+    }
+
+    /// 다이내믹 아일랜드·노치 쪽 여백: 막대 자체 여백과 앱 화면 여백 중 큰 쪽 (기기마다 자동)
+    override func layoutSubviews() {
+        let app = BoardViewController.sideInsets
+        let l = max(safeAreaInsets.left, app.left), r = max(safeAreaInsets.right, app.right)
+        if leadC.constant != l + 8 { leadC.constant = l + 8 }
+        if trailC.constant != -(r + 14) { trailC.constant = -(r + 14) }
+        super.layoutSubviews()
     }
     required init?(coder: NSCoder) { fatalError() }
 
@@ -901,6 +921,16 @@ final class NumPad: UIInputView, UIInputViewAudioFeedback {
     var onLetters: (() -> Void)?
     var enableInputClicksWhenVisible: Bool { true }
     private var repeatTimer: Timer?
+    private var padLead: NSLayoutConstraint!
+    private var padTrail: NSLayoutConstraint!
+
+    override func layoutSubviews() {
+        let app = BoardViewController.sideInsets
+        let l = max(safeAreaInsets.left, app.left), r = max(safeAreaInsets.right, app.right)
+        if padLead.constant != l + 4 { padLead.constant = l + 4 }
+        if padTrail.constant != -(r + 4) { padTrail.constant = -(r + 4) }
+        super.layoutSubviews()
+    }
 
     init() {
         super.init(frame: CGRect(x: 0, y: 0, width: 320, height: 180), inputViewStyle: .keyboard)
@@ -917,11 +947,13 @@ final class NumPad: UIInputView, UIInputViewAudioFeedback {
         addSubview(col)
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: 180),
-            col.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 4),
-            col.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -4),
+
             col.topAnchor.constraint(equalTo: topAnchor, constant: 8),
             col.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -6),
         ])
+        padLead = col.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4)
+        padTrail = col.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4)
+        NSLayoutConstraint.activate([padLead, padTrail])
         for r in rows {
             let row = UIStackView()
             row.axis = .horizontal; row.spacing = 6
